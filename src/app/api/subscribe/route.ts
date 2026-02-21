@@ -1,5 +1,23 @@
 import { prisma } from "@/lib/prisma";
+import { getResend } from "@/lib/resend";
+import { Welcome } from "@/emails/Welcome";
 import { NextRequest } from "next/server";
+
+async function sendWelcomeEmail(email: string, token: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const unsubscribeUrl = `${appUrl}/unsubscribe?token=${token}`;
+
+  try {
+    await getResend().emails.send({
+      from: process.env.RESEND_FROM_EMAIL ?? "JEEK <digest@jeek.dev>",
+      to: email,
+      subject: "JEEK에 오신 걸 환영합니다!",
+      react: Welcome({ unsubscribeUrl }),
+    });
+  } catch (e) {
+    console.error("Welcome email error:", e);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,11 +38,13 @@ export async function POST(request: NextRequest) {
         where: { email },
         data: { active: true, unsubscribedAt: null },
       });
-      return Response.json({ message: "다시 구독되었습니다" });
+      sendWelcomeEmail(email, existing.token);
+      return Response.json({ message: "다시 구독되었습니다!" });
     }
 
-    await prisma.subscriber.create({ data: { email } });
-    return Response.json({ message: "구독 완료!" });
+    const subscriber = await prisma.subscriber.create({ data: { email } });
+    sendWelcomeEmail(email, subscriber.token);
+    return Response.json({ message: "구독 완료! 환영 이메일을 보내드렸습니다." });
   } catch (e) {
     console.error("Subscribe error:", e);
     return Response.json({ error: "구독에 실패했습니다" }, { status: 500 });
