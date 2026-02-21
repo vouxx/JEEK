@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { StatusBar } from "@/components/StatusBar";
-import { HomeIndicator } from "@/components/HomeIndicator";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { PhoneFrame } from "@/components/PhoneFrame";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -55,16 +54,7 @@ export default function RootLayout({
             {/* 사이드 버튼 — 오른쪽: 전원 */}
             <div className="absolute -right-[8px] top-[192px] w-[3px] h-[72px] rounded-r bg-neutral-700" />
 
-            {/* 폰 본체 */}
-            <div className="relative w-[390px] h-[844px] flex flex-col rounded-[3rem] bg-white dark:bg-neutral-900 overflow-hidden shadow-2xl ring-[6px] ring-neutral-800">
-              <StatusBar />
-              <div className="phone-scroll flex-1 flex flex-col overflow-y-auto pt-12 pb-4 hide-scrollbar">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <HomeIndicator />
-            </div>
+            <PhoneFrame>{children}</PhoneFrame>
           </div>
         </ThemeProvider>
       </body>
