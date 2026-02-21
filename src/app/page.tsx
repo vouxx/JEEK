@@ -1,6 +1,5 @@
 import { getLatestDigest } from "@/lib/digest";
 import { DigestList } from "@/components/DigestList";
-import { SubscribeForm } from "@/components/SubscribeForm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,27 +16,24 @@ export default async function HomePage() {
     : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="px-6 py-6">
       {digest ? (
-        <>
-          <div className="mb-6">
-            <h1 className="text-xl font-bold text-neutral-900">오늘의 다이제스트</h1>
-            <p className="text-sm text-neutral-500">{dateStr}</p>
+        <div className="animate-fade-in">
+          <div className="mb-10">
+            <p className="text-xs font-medium tracking-wider text-neutral-400 dark:text-neutral-500 uppercase">{dateStr}</p>
+            <h1 className="mt-1 text-lg font-bold text-neutral-900 dark:text-neutral-100">오늘의 다이제스트</h1>
           </div>
           <DigestList items={digest.items} />
-        </>
+        </div>
       ) : (
-        <div className="py-20 text-center">
-          <h1 className="text-2xl font-bold text-neutral-900">JEEK</h1>
-          <p className="mt-2 text-neutral-500">
-            AI/Tech 뉴스 다이제스트가 곧 시작됩니다.
+        <div className="animate-slide-up py-24 text-center">
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">JEEK</h1>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400 dark:text-neutral-500">
+            매일 아침, AI와 테크 뉴스를 큐레이션합니다.
           </p>
         </div>
       )}
 
-      <div className="mt-12">
-        <SubscribeForm />
-      </div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 export function Footer() {
   return (
-    <footer className="border-t border-neutral-200 bg-white py-6 text-center text-sm text-neutral-400">
-      <p>JEEK — AI/Tech 데일리 다이제스트</p>
-      <p className="mt-1">Gemini + Resend 기반</p>
+    <footer className="border-t border-neutral-100 dark:border-neutral-800 py-4">
+      <div className="px-6 text-center text-xs text-neutral-300 dark:text-neutral-600">
+        <p>&copy; {new Date().getFullYear()} JEEK</p>
+      </div>
     </footer>
   );
 }

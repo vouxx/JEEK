@@ -29,10 +29,10 @@ export default async function DigestPage({ params }: Props) {
   });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="px-6 py-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-neutral-900">데일리 다이제스트</h1>
-        <p className="text-sm text-neutral-500">{dateStr}</p>
+        <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">데일리 다이제스트</h1>
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">{dateStr}</p>
       </div>
       <DigestList items={digest.items} />
     </div>

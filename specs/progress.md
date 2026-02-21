@@ -29,6 +29,50 @@
 
 ---
 
+## Session 2026-02-21 (2)
+
+### 배포 및 UI 전면 리디자인 ✅
+
+**작업 내역**:
+
+1. git 저장소 분리 (zei/ → jeek/ 독립 저장소)
+2. Vercel 배포 설정 (prisma generate 빌드 수정)
+3. 아이폰 목업 UI 구현
+   - 상태바 (실시간 시간, 셀룰러, 와이파이, 배터리)
+   - 다이나믹 아일랜드, 사이드 버튼 (무음/볼륨/전원)
+   - 홈 인디케이터 (비활성 시 1.5초 페이드아웃, 스와이프 맨 위 이동)
+4. 미니멀 디자인 강화 (여백, 타이포그래피, 애니메이션)
+5. 반응형: 데스크톱 폰 목업 / 모바일 풀스크린
+6. 헤더: 네비 활성 표시, 스크롤 방향 감지 숨김/표시
+7. 페이지 전환 fade-in 애니메이션
+8. 다크모드 (클래스 기반 토글, 전체 컴포넌트 대응)
+9. 구독 전용 페이지 (/subscribe) 분리
+10. PWA manifest + 앱 아이콘 (SVG)
+11. OG 이미지 동적 생성 + Apple 아이콘
+12. 파비콘 커스텀, Next.js 기본 아이콘 제거
+
+**주요 파일 변경**:
+
+- `src/app/layout.tsx` — 아이폰 목업 프레임 + 반응형
+- `src/app/globals.css` — 애니메이션, 다크모드 variant, 스크롤바 숨김
+- `src/app/template.tsx` — 페이지 전환 애니메이션
+- `src/app/subscribe/page.tsx` — 구독 전용 페이지 (신규)
+- `src/app/manifest.ts` — PWA manifest (신규)
+- `src/app/opengraph-image.tsx` — OG 이미지 (신규)
+- `src/app/apple-icon.tsx` — Apple 아이콘 (신규)
+- `src/app/icon.svg` — 파비콘 (신규)
+- `src/components/StatusBar.tsx` — 아이폰 상태바 (신규)
+- `src/components/HomeIndicator.tsx` — 홈 인디케이터 (신규)
+- `src/components/ThemeProvider.tsx` — 다크모드 컨텍스트 (신규)
+- `src/components/Header.tsx` — 활성 표시, 스크롤 숨김, 다크모드 토글
+- `src/components/Footer.tsx` — 카피라이트, 다크모드
+- `src/components/SubscribeForm.tsx` — 다크모드
+- `src/components/DigestCard.tsx` — 다크모드
+- `src/components/DigestList.tsx` — 다크모드
+- `next.config.ts` — devIndicators 비활성화
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |
