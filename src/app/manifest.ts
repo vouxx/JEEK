@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "JEEK — AI/Tech Daily Digest",
-    short_name: "JEEK",
+    name: "ZEEK — AI/Tech Daily Digest",
+    short_name: "ZEEK",
     description: "매일 아침, AI와 테크 뉴스를 큐레이션합니다.",
     start_url: "/",
     display: "standalone",

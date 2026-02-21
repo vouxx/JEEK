@@ -11,7 +11,7 @@ function getAI() {
   return _ai;
 }
 
-const SYSTEM_PROMPT = `너는 JEEK이라는 데일리 뉴스레터의 테크 뉴스 큐레이터야.
+const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴스 큐레이터야.
 지난 24시간 동안의 가장 중요한 뉴스를 찾아서 요약해줘.
 
 반드시 한국어로 작성하고, JSON 배열로 5~7개 뉴스 아이템을 반환해줘. 각 아이템은 다음 필드를 포함해야 해:

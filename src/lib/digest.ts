@@ -74,9 +74,9 @@ export async function generateAndSendDigest() {
   for (const subscriber of subscribers) {
     try {
       await getResend().emails.send({
-        from: process.env.RESEND_FROM_EMAIL ?? "JEEK <digest@jeek.dev>",
+        from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
         to: subscriber.email,
-        subject: `JEEK Daily — ${dateStr}`,
+        subject: `ZEEK Daily — ${dateStr}`,
         react: DailyDigest({
           date: dateStr,
           categories: categoryDigests,

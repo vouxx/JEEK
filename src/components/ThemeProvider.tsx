@@ -17,12 +17,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const saved = localStorage.getItem("jeek-theme") as Theme | null;
+    const saved = localStorage.getItem("zeek-theme") as Theme | null;
     if (saved) setTheme(saved);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("jeek-theme", theme);
+    localStorage.setItem("zeek-theme", theme);
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 

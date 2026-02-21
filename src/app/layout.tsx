@@ -18,10 +18,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
-  title: "JEEK — AI/Tech Daily Digest",
+  title: "ZEEK — AI/Tech Daily Digest",
   description: "매일 아침, AI와 테크 뉴스를 요약해서 전해드립니다.",
   openGraph: {
-    title: "JEEK — AI/Tech Daily Digest",
+    title: "ZEEK — AI/Tech Daily Digest",
     description: "매일 아침, AI와 테크 뉴스를 큐레이션합니다.",
     type: "website",
   },

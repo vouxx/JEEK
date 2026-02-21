@@ -1,8 +1,8 @@
-# JEEK - Project Specification
+# ZEEK - Project Specification
 
 ## Overview
 
-JEEK은 AI 기반 데일리 기술 뉴스 큐레이션 서비스다.
+ZEEK은 AI 기반 데일리 기술 뉴스 큐레이션 서비스다.
 Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 이메일로 전달한다.
 
 ---
@@ -86,7 +86,7 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 - **FR-21**: MUST - 홈 인디케이터 (비활성 시 페이드아웃)
 - **FR-22**: MUST - 스크롤 방향 감지 헤더 (내리면 숨김, 올리면 표시)
 - **FR-23**: MUST - 페이지 전환 애니메이션 (fade-in)
-- **FR-28**: MUST - 인트로 타이핑 애니메이션 (폰 프레임 내 JEEK 타이핑 → 페이드아웃, 세션당 1회)
+- **FR-28**: MUST - 인트로 타이핑 애니메이션 (폰 프레임 내 ZEEK 타이핑 → 페이드아웃, 세션당 1회)
 - **FR-24**: SHOULD - PWA 지원 (manifest, 앱 아이콘)
 - **FR-25**: SHOULD - OG 이미지 동적 생성
 

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 export function Intro({ onDone }: { onDone: () => void }) {
   const [text, setText] = useState("");
   const [fading, setFading] = useState(false);
-  const full = "JEEK";
+  const full = "ZEEK";
 
   useEffect(() => {
     let i = 0;

@@ -18,10 +18,10 @@ export function Welcome({ unsubscribeUrl }: WelcomeProps) {
   return (
     <Html>
       <Head />
-      <Preview>JEEK에 오신 걸 환영합니다</Preview>
+      <Preview>ZEEK에 오신 걸 환영합니다</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={logo}>JEEK</Heading>
+          <Heading style={logo}>ZEEK</Heading>
           <Text style={greeting}>구독해주셔서 감사합니다!</Text>
           <Text style={body}>
             매일 아침 8시, AI와 테크 분야의 주요 뉴스를 큐레이션해서 보내드립니다.
@@ -39,7 +39,7 @@ export function Welcome({ unsubscribeUrl }: WelcomeProps) {
               구독 해지
             </Link>
             {" · "}
-            Powered by JEEK
+            Powered by ZEEK
           </Text>
         </Container>
       </Body>

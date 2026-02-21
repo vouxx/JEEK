@@ -27,7 +27,7 @@ export default async function HomePage() {
         </div>
       ) : (
         <div className="animate-slide-up py-24 text-center">
-          <h1 className="font-mono text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">JEEK</h1>
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">ZEEK</h1>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400 dark:text-neutral-500">
             매일 아침, AI와 테크 뉴스를 큐레이션합니다.
           </p>

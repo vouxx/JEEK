@@ -1,4 +1,4 @@
-# JEEK Tasks
+# ZEEK Tasks
 
 ## Goal
 
@@ -20,7 +20,7 @@ AI 기반 한국어 데일리 기술 뉴스레터 플랫폼 운영 및 개선
 - [x] 카테고리 확장 (4개 → 8개)
 - [x] 빈 카테고리 필터 버튼 숨김 처리
 - [x] Spec-driven 워크플로우 세팅
-- [x] 독립 git 저장소 분리 (zei → jeek)
+- [x] 독립 git 저장소 분리 (zei → zeek)
 - [x] Vercel 배포 (Prisma generate 빌드 수정)
 - [x] 아이폰 목업 UI (상태바, 사이드 버튼, 홈 인디케이터)
 - [x] 미니멀 디자인 강화 (여백, 타이포그래피, 애니메이션)

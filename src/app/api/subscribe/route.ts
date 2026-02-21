@@ -9,9 +9,9 @@ async function sendWelcomeEmail(email: string, token: string) {
 
   try {
     await getResend().emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "JEEK <digest@jeek.dev>",
+      from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
       to: email,
-      subject: "JEEK에 오신 걸 환영합니다!",
+      subject: "ZEEK에 오신 걸 환영합니다!",
       react: Welcome({ unsubscribeUrl }),
     });
   } catch (e) {

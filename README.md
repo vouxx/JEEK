@@ -1,4 +1,4 @@
-# JEEK
+# ZEEK
 
 AI 기반 한국어 데일리 기술 뉴스 큐레이션 서비스.
 
@@ -44,7 +44,7 @@ http://localhost:3000 에서 확인.
 DATABASE_URL=           # Neon PostgreSQL 연결 문자열
 GEMINI_API_KEY=         # Google Gemini API 키
 RESEND_API_KEY=         # Resend API 키
-RESEND_FROM_EMAIL=      # 발신 이메일 (예: "JEEK <digest@jeek.dev>")
+RESEND_FROM_EMAIL=      # 발신 이메일 (예: "ZEEK <digest@zeek.dev>")
 CRON_SECRET=            # 크론 인증 토큰
 NEXT_PUBLIC_APP_URL=    # 앱 공개 URL
 ```
@@ -80,3 +80,16 @@ npm run lint             # ESLint
 node scripts/check-sources.mjs   # 수집된 출처 확인
 node scripts/reset-digest.mjs    # 다이제스트 초기화
 ```
+
+## Release
+
+[standard-version](https://github.com/conventional-changelog/standard-version) 기반 자동 버전 관리.
+
+```bash
+npm run ship          # 커밋 메시지 기반 자동 (feat→minor, fix→patch)
+npm run ship:patch    # 강제 patch (0.0.X)
+npm run ship:minor    # 강제 minor (0.X.0)
+npm run ship:major    # 강제 major (X.0.0)
+```
+
+실행 시 자동 처리: 버전 bump → Footer 버전 업데이트 → CHANGELOG.md 갱신 → 릴리스 커밋 + 태그 → 푸시

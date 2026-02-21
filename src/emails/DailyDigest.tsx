@@ -22,10 +22,10 @@ export function DailyDigest({ date, categories, unsubscribeUrl }: DailyDigestPro
   return (
     <Html>
       <Head />
-      <Preview>JEEK Daily — {date}</Preview>
+      <Preview>ZEEK Daily — {date}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={logo}>JEEK</Heading>
+          <Heading style={logo}>ZEEK</Heading>
           <Text style={dateText}>{date}</Text>
           <Hr style={hr} />
 
@@ -54,7 +54,7 @@ export function DailyDigest({ date, categories, unsubscribeUrl }: DailyDigestPro
               구독 해지
             </Link>
             {" · "}
-            Powered by JEEK
+            Powered by ZEEK
           </Text>
         </Container>
       </Body>

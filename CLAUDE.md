@@ -1,4 +1,4 @@
-# JEEK - AI/Tech Daily Newsletter
+# ZEEK - AI/Tech Daily Newsletter
 
 ## Project Overview
 
