@@ -1,0 +1,49 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["jeek"]
+}
+
+model Digest {
+  id        String       @id @default(cuid())
+  date      DateTime     @unique @db.Date
+  createdAt DateTime     @default(now())
+  items     DigestItem[]
+
+  @@index([date(sort: Desc)])
+  @@schema("jeek")
+}
+
+model DigestItem {
+  id           String @id @default(cuid())
+  digestId     String
+  digest       Digest @relation(fields: [digestId], references: [id], onDelete: Cascade)
+  category     String
+  title        String
+  summary      String
+  whyItMatters String
+  sourceUrl    String
+  order        Int    @default(0)
+
+  @@index([digestId])
+  @@index([category])
+  @@schema("jeek")
+}
+
+model Subscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  active         Boolean   @default(true)
+  token          String    @unique @default(cuid())
+  createdAt      DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  @@index([active])
+  @@index([token])
+  @@schema("jeek")
+}

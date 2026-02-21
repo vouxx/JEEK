@@ -1,0 +1,175 @@
+# JEEK - Project Specification
+
+## Overview
+
+JEEK은 AI 기반 데일리 기술 뉴스 큐레이션 서비스다.
+Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 이메일로 전달한다.
+
+---
+
+## User Scenarios
+
+### US-1: 최신 뉴스 확인
+
+**Given** 사용자가 홈페이지에 접속하면
+**When** 오늘의 다이제스트가 존재할 때
+**Then** 카테고리별로 그룹된 뉴스 목록이 표시된다
+
+### US-2: 카테고리 필터링
+
+**Given** 다이제스트가 표시된 상태에서
+**When** 사용자가 카테고리 버튼을 클릭하면
+**Then** 해당 카테고리의 뉴스만 필터링되어 표시된다
+**And** 데이터가 있는 카테고리만 버튼으로 표시된다
+
+### US-3: 이메일 구독
+
+**Given** 사용자가 이메일을 입력하고 구독 버튼을 클릭하면
+**When** 유효한 이메일일 때
+**Then** 구독자로 등록되고 매일 다이제스트 이메일을 수신한다
+
+### US-4: 구독 해지
+
+**Given** 구독자가 이메일의 구독 해지 링크를 클릭하면
+**When** 유효한 토큰일 때
+**Then** 구독이 비활성화되고 확인 메시지가 표시된다
+
+### US-5: 아카이브 열람
+
+**Given** 사용자가 아카이브 페이지에 접속하면
+**When** 과거 다이제스트가 존재할 때
+**Then** 날짜별 다이제스트 목록이 표시되고, 각 항목을 클릭해 열람할 수 있다
+
+### US-6: 일일 자동 생성
+
+**Given** 매일 UTC 23:00에 크론이 실행되면
+**When** 오늘 다이제스트가 아직 없을 때
+**Then** 8개 카테고리의 뉴스를 수집하여 DB에 저장하고, 모든 활성 구독자에게 이메일을 발송한다
+
+---
+
+## Functional Requirements
+
+### 뉴스 수집
+
+- **FR-1**: MUST - Gemini AI + Google Search로 지난 24시간 뉴스 수집
+- **FR-2**: MUST - 카테고리당 5~7개 뉴스 아이템 반환
+- **FR-3**: MUST - 한국어로 작성, 영어/한국어 소스 모두 검색
+- **FR-4**: MUST - 각 아이템에 title, summary, whyItMatters, sourceHint 포함
+- **FR-5**: SHOULD - grounding metadata를 통한 출처 URL 검증 (3단계 fallback)
+
+### 카테고리
+
+- **FR-6**: MUST - 다음 8개 카테고리 지원:
+
+| ID | Label | 범위 |
+|----|-------|------|
+| `ai-ml` | AI / ML | LLM, 컴퓨터 비전, AI 도구, 연구, 모델 출시 |
+| `web-dev` | Web Dev | 프레임워크, 브라우저, JS/TS, CSS, 웹 표준 |
+| `cloud-infra` | Cloud / Infra | AWS, GCP, Azure, K8s, Docker, DevOps, CI/CD |
+| `security` | Security | 보안 취약점, 데이터 유출, 제로데이, 프라이버시 |
+| `mobile` | Mobile | iOS, Android, Flutter, React Native, 앱스토어 |
+| `startups` | Startups | 펀딩, 인수합병, 제품 출시, 빅테크 |
+| `open-source` | Open Source | 릴리스, 주목 프로젝트, 라이선스 변경 |
+| `science-tech` | Science / Tech | 반도체, 양자컴퓨팅, 우주, 바이오테크, 로보틱스 |
+
+### 웹 UI
+
+- **FR-7**: MUST - 최신 다이제스트를 홈페이지에 표시
+- **FR-8**: MUST - 카테고리별 필터 버튼 (데이터 있는 카테고리만)
+- **FR-9**: MUST - 뉴스 카드에 제목(출처 링크), 요약, whyItMatters 표시
+- **FR-10**: MUST - 날짜별 아카이브 페이지
+- **FR-11**: MUST - 이메일 구독 폼
+
+### 이메일
+
+- **FR-12**: MUST - React Email 기반 HTML 이메일 템플릿
+- **FR-13**: MUST - 카테고리별 그룹된 뉴스 + 원본 링크
+- **FR-14**: MUST - 토큰 기반 구독 해지 링크
+
+### 구독 관리
+
+- **FR-15**: MUST - 이메일 유효성 검증
+- **FR-16**: MUST - 중복 이메일 시 재활성화
+- **FR-17**: MUST - 고유 토큰 기반 구독 해지
+
+---
+
+## Constraints
+
+- **CON-1**: Gemini free tier 제한 (5 RPM) → 카테고리 간 15초 대기
+- **CON-2**: 뉴스 수집은 지난 24시간 이내만
+- **CON-3**: Vercel Cron으로 일 1회 실행 (UTC 23:00)
+- **CON-4**: Neon serverless PostgreSQL 사용
+
+---
+
+## Success Criteria
+
+- **SC-1**: 매일 8개 카테고리에서 40~56개 뉴스 아이템 수집
+- **SC-2**: 출처 URL 검증 성공률 70% 이상 (Google News fallback 30% 이하)
+- **SC-3**: 구독자 이메일 발송 성공률 95% 이상
+- **SC-4**: 다이제스트 생성 소요 시간 3분 이내
+
+---
+
+## Data Model
+
+### Digest
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (CUID) | PK |
+| date | DateTime (unique) | 다이제스트 날짜 |
+| createdAt | DateTime | 생성 시각 |
+
+### DigestItem
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (CUID) | PK |
+| digestId | String (FK) | Digest 참조 |
+| category | String | 카테고리 ID |
+| title | String | 헤드라인 |
+| summary | String | 한 줄 요약 |
+| whyItMatters | String | 개발자 관련성 |
+| sourceUrl | String | 원본 기사 URL |
+| order | Int | 표시 순서 |
+
+### Subscriber
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (CUID) | PK |
+| email | String (unique) | 이메일 |
+| active | Boolean | 구독 상태 |
+| token | String (unique) | 해지용 토큰 |
+| createdAt | DateTime | 가입 시각 |
+| unsubscribedAt | DateTime? | 해지 시각 |
+
+---
+
+## API Endpoints
+
+### POST /api/subscribe
+
+구독 등록
+
+- **Request**: `{ email: string }`
+- **Response 200**: `{ message: "구독 완료!" }`
+- **Response 400**: `{ error: "유효하지 않은 이메일입니다" }`
+
+### POST /api/unsubscribe
+
+구독 해지
+
+- **Request**: `{ token: string }`
+- **Response 200**: `{ message: "Unsubscribed successfully" }`
+- **Response 404**: `{ error: "Invalid token" }`
+
+### GET /api/cron/generate
+
+다이제스트 생성 (Bearer 인증)
+
+- **Response 200**: `{ ok: true, id: string }`
+- **Response 401**: `{ error: "Unauthorized" }`
