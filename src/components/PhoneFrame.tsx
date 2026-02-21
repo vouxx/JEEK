@@ -8,9 +8,13 @@ import { Footer } from "./Footer";
 import { Intro } from "./Intro";
 
 export function PhoneFrame({ children }: { children: React.ReactNode }) {
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !sessionStorage.getItem("jeek-intro-seen");
+  });
 
   const handleIntroDone = useCallback(() => {
+    sessionStorage.setItem("jeek-intro-seen", "1");
     setShowIntro(false);
   }, []);
 
