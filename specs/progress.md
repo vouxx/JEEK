@@ -96,6 +96,23 @@
 - `src/components/SubscribeForm.tsx` — Gmail 안내 문구 + placeholder
 - `specs/SPEC.md` — US-6, CON-3, FR-12, FR-15, CON-5 업데이트
 
+### 링크 검증 + 소스 다양화 ✅
+
+**작업 내역**:
+
+1. grounding redirect URL → 실제 URL 리졸브 (`resolveAndVerifyUrl`) — GET + follow redirect
+2. 접근 불가 URL/홈페이지 URL 자동 제외
+3. 시스템 프롬프트 소스 다양화 — HN, Reddit, dev.to, GitHub, 블로그 등 명시적 포함
+4. 카테고리당 7~10개 요청 (검증 탈락 대비 여유분)
+5. Google News fallback 제거 — 검증된 URL 없는 아이템은 결과에서 제외
+6. 아이템-chunk 매핑 개선: startIndex 기반 위치 매핑 + 텍스트 유사도 fallback 병행
+7. 중복 URL 방지 (`usedUrls` Set)
+
+**수정 파일**:
+
+- `src/lib/gemini.ts` — 전면 리팩토링
+- `specs/SPEC.md` — FR-1, FR-2, FR-5, FR-29 업데이트
+
 ---
 
 ## 5-Question Reboot Check

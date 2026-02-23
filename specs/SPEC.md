@@ -54,11 +54,12 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ### 뉴스 수집
 
-- **FR-1**: MUST - Gemini AI + Google Search로 지난 24시간 뉴스 수집
-- **FR-2**: MUST - 카테고리당 5~7개 뉴스 아이템 반환
+- **FR-1**: MUST - Gemini AI + Google Search로 지난 24시간 뉴스 및 커뮤니티 화제 글 수집
+- **FR-2**: MUST - 카테고리당 7~10개 아이템 요청, 검증 통과한 것만 반환
 - **FR-3**: MUST - 한국어로 작성, 영어/한국어 소스 모두 검색
 - **FR-4**: MUST - 각 아이템에 title, summary, whyItMatters, sourceHint 포함
-- **FR-5**: SHOULD - grounding metadata를 통한 출처 URL 검증 (3단계 fallback)
+- **FR-5**: MUST - grounding redirect URL → 실제 URL 리졸브 + GET 접근 검증, 실패 시 아이템 제외
+- **FR-29**: MUST - 소스 범위: 뉴스 매체, 개발자 커뮤니티(HN, Reddit), 블로그, GitHub 등
 
 ### 카테고리
 
