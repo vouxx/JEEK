@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getResend } from "@/lib/resend";
 import { Welcome } from "@/emails/Welcome";
+import { render } from "@react-email/render";
 import { NextRequest } from "next/server";
 
 async function sendWelcomeEmail(email: string, token: string) {
@@ -12,7 +13,7 @@ async function sendWelcomeEmail(email: string, token: string) {
       from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
       to: email,
       subject: "ZEEK에 오신 걸 환영합니다!",
-      react: Welcome({ unsubscribeUrl }),
+      html: await render(Welcome({ unsubscribeUrl })),
     });
   } catch (e) {
     console.error("Welcome email error:", e);
@@ -25,6 +26,10 @@ export async function POST(request: NextRequest) {
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return Response.json({ error: "유효하지 않은 이메일입니다" }, { status: 400 });
+    }
+
+    if (!email.endsWith("@gmail.com")) {
+      return Response.json({ error: "현재 Gmail 주소만 구독 가능합니다" }, { status: 400 });
     }
 
     const existing = await prisma.subscriber.findUnique({ where: { email } });

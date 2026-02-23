@@ -3,12 +3,19 @@ import { getResend } from "./resend";
 import { fetchNewsForCategory } from "./gemini";
 import { CATEGORY_KEYS, CATEGORIES } from "./constants";
 import { DailyDigest } from "@/emails/DailyDigest";
+import { render } from "@react-email/render";
 import type { CategoryDigest } from "@/types/digest";
 import type { Category } from "@/types/digest";
 
+/** Vercel(UTC) 서버에서도 KST 기준 오늘 날짜를 반환 */
+function getTodayKST(): Date {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const dateStr = kst.toISOString().slice(0, 10);
+  return new Date(dateStr + "T00:00:00.000Z");
+}
+
 export async function generateAndSendDigest() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayKST();
 
   // Check if already generated today
   const existing = await prisma.digest.findUnique({
@@ -50,6 +57,17 @@ export async function generateAndSendDigest() {
     include: { items: true },
   });
 
+  // 평일(월~금)에만 이메일 발송 (KST 기준)
+  const kstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDay();
+  const isWeekday = kstDay >= 1 && kstDay <= 5;
+
+  if (!isWeekday) {
+    console.log(
+      `Digest generated: ${digest.items.length} items (weekend — email skipped)`
+    );
+    return digest;
+  }
+
   // Send emails to all active subscribers
   const subscribers = await prisma.subscriber.findMany({
     where: { active: true },
@@ -77,11 +95,11 @@ export async function generateAndSendDigest() {
         from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
         to: subscriber.email,
         subject: `ZEEK Daily — ${dateStr}`,
-        react: DailyDigest({
+        html: await render(DailyDigest({
           date: dateStr,
           categories: categoryDigests,
           unsubscribeUrl: `${appUrl}/unsubscribe?token=${subscriber.token}`,
-        }),
+        })),
       });
     } catch (e) {
       console.error(`Failed to send email to ${subscriber.email}:`, e);
@@ -93,6 +111,68 @@ export async function generateAndSendDigest() {
   );
 
   return digest;
+}
+
+/** 오늘자 다이제스트의 이메일만 발송 (콘텐츠 생성 없이) */
+export async function sendTodayDigest() {
+  const today = getTodayKST();
+
+  const digest = await prisma.digest.findUnique({
+    where: { date: today },
+    include: { items: { orderBy: { order: "asc" } } },
+  });
+
+  if (!digest) {
+    return { ok: false, error: "No digest for today" };
+  }
+
+  const subscribers = await prisma.subscriber.findMany({
+    where: { active: true },
+  });
+
+  const categoryDigests: CategoryDigest[] = CATEGORY_KEYS.map((key) => ({
+    category: key,
+    label: CATEGORIES[key].label,
+    items: digest.items
+      .filter((item) => item.category === key)
+      .map((item) => ({
+        title: item.title,
+        summary: item.summary,
+        whyItMatters: item.whyItMatters,
+        sourceUrl: item.sourceUrl,
+        sourceHint: "",
+      })),
+  }));
+
+  const dateStr = today.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  let sent = 0;
+
+  for (const subscriber of subscribers) {
+    try {
+      await getResend().emails.send({
+        from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
+        to: subscriber.email,
+        subject: `ZEEK Daily — ${dateStr}`,
+        html: await render(DailyDigest({
+          date: dateStr,
+          categories: categoryDigests,
+          unsubscribeUrl: `${appUrl}/unsubscribe?token=${subscriber.token}`,
+        })),
+      });
+      sent++;
+    } catch (e) {
+      console.error(`Failed to send email to ${subscriber.email}:`, e);
+    }
+  }
+
+  console.log(`Email sent to ${sent}/${subscribers.length} subscribers`);
+  return { ok: true, sent, total: subscribers.length };
 }
 
 export async function getLatestDigest() {

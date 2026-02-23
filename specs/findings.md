@@ -32,6 +32,9 @@
 | 카테고리 순차 호출 | Gemini free tier RPM 제한, 병렬 호출 불가 |
 | 카테고리 description 영어 | Gemini Google Search가 영어 키워드로 더 넓은 범위 검색 |
 | DigestList 동적 필터 | CATEGORIES 객체 기반으로 UI 자동 반영 |
+| `html: await render(...)` 방식 | Resend `react:` 옵션이 `@react-email/render` 해석 실패 → 명시적 렌더링으로 전환 |
+| Gmail 구독 제한 | Resend `onboarding@resend.dev` 테스트 도메인은 계정 이메일로만 발송 가능. 커스텀 도메인 등록 전까지 Gmail만 허용 |
+| KST 날짜 유틸 | Vercel(UTC 서버)에서 `new Date().setHours(0,0,0,0)` 사용 시 KST 날짜와 불일치 → `getTodayKST()` 도입 |
 
 ## Issues Encountered
 
@@ -47,6 +50,7 @@
 - 타입 정의: `src/types/digest.ts`
 - DB 스키마: `prisma/schema.prisma`
 - 크론 엔드포인트: `src/app/api/cron/generate/route.ts`
+- 이메일 재발송: `src/app/api/cron/send/route.ts`
 
 ### 참고 문서
 

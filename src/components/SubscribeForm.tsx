@@ -39,7 +39,7 @@ export function SubscribeForm() {
         뉴스레터 구독
       </h3>
       <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-        매일 아침 AI/Tech 뉴스를 이메일로 받아보세요.
+        매일 아침 AI/Tech 뉴스를 이메일로 받아보세요. (Gmail만 가능)
       </p>
 
       {status === "success" ? (
@@ -50,7 +50,7 @@ export function SubscribeForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
+            placeholder="your@gmail.com"
             required
             className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 outline-none focus:ring-1 focus:ring-neutral-300 dark:focus:ring-neutral-600 transition-shadow"
           />

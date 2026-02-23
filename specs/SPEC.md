@@ -42,9 +42,11 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ### US-6: 일일 자동 생성
 
-**Given** 매일 UTC 23:00에 크론이 실행되면
-**When** 오늘 다이제스트가 아직 없을 때
-**Then** 8개 카테고리의 뉴스를 수집하여 DB에 저장하고, 모든 활성 구독자에게 이메일을 발송한다
+**Given** 매일 UTC 00:00 (KST 09:00)에 크론이 실행되면
+**When** 오늘(KST) 다이제스트가 아직 없을 때
+**Then** 8개 카테고리의 뉴스를 수집하여 DB에 저장한다
+**And** 평일(월~금)이면 모든 활성 구독자에게 이메일을 발송한다
+**And** 주말이면 이메일 발송을 건너뛴다 (웹사이트에서는 열람 가능)
 
 ---
 
@@ -92,14 +94,14 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ### 이메일
 
-- **FR-12**: MUST - React Email 기반 HTML 이메일 템플릿
+- **FR-12**: MUST - React Email 기반 HTML 이메일 템플릿 (`@react-email/render`로 명시적 렌더링)
 - **FR-13**: MUST - 카테고리별 그룹된 뉴스 + 원본 링크
 - **FR-14**: MUST - 토큰 기반 구독 해지 링크
 - **FR-27**: MUST - 환영 이메일 템플릿 (React Email)
 
 ### 구독 관리
 
-- **FR-15**: MUST - 이메일 유효성 검증
+- **FR-15**: MUST - 이메일 유효성 검증 (Gmail만 허용)
 - **FR-16**: MUST - 중복 이메일 시 재활성화
 - **FR-17**: MUST - 고유 토큰 기반 구독 해지
 - **FR-26**: MUST - 구독 즉시 환영 이메일 발송
@@ -110,8 +112,9 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 - **CON-1**: Gemini free tier 제한 (5 RPM) → 카테고리 간 15초 대기
 - **CON-2**: 뉴스 수집은 지난 24시간 이내만
-- **CON-3**: Vercel Cron으로 일 1회 실행 (UTC 23:00)
+- **CON-3**: Vercel Cron으로 매일 UTC 00:00 (KST 09:00) 실행, 이메일은 평일만
 - **CON-4**: Neon serverless PostgreSQL 사용
+- **CON-5**: Resend 테스트 도메인(`onboarding@resend.dev`) 사용 → Gmail 구독자만 허용 (커스텀 도메인 등록 시 해제 가능)
 
 ---
 

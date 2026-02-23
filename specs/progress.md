@@ -73,6 +73,31 @@
 
 ---
 
+## Session 2026-02-23
+
+### 크론 스케줄 변경 + 평일 이메일 발송 + Gmail 제한 ✅
+
+**작업 내역**:
+
+1. 크론 스케줄 변경: `0 23 * * *` → `0 0 * * *` (UTC 00:00 = KST 09:00)
+2. KST 날짜 계산 유틸 추가 (`getTodayKST()`) — UTC 서버에서도 KST 기준 날짜 사용
+3. 평일 체크 로직 추가 — 주말(토/일)이면 이메일 발송 스킵, 콘텐츠 생성만 수행
+4. `@react-email/render` 직접 의존성 추가 + `html: await render(...)` 방식으로 변경
+5. 이메일 발송 전용 API 추가 (`/api/cron/send`) — 기존 다이제스트의 이메일만 재발송
+6. Gmail 구독 제한 — Resend 테스트 도메인 제약으로 `@gmail.com`만 허용
+7. 구독 폼 안내 문구 + placeholder 업데이트
+
+**수정 파일**:
+
+- `vercel.json` — 크론 스케줄 변경
+- `src/lib/digest.ts` — KST 날짜 유틸 + 평일 체크 + `sendTodayDigest()` + `html` 렌더링
+- `src/app/api/cron/send/route.ts` — 이메일 발송 전용 엔드포인트 (신규)
+- `src/app/api/subscribe/route.ts` — Gmail 제한 + `html` 렌더링
+- `src/components/SubscribeForm.tsx` — Gmail 안내 문구 + placeholder
+- `specs/SPEC.md` — US-6, CON-3, FR-12, FR-15, CON-5 업데이트
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |
