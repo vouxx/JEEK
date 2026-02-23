@@ -35,6 +35,16 @@ model DigestItem {
   @@schema("jeek")
 }
 
+model MonthlySummary {
+  id      String @id @default(cuid())
+  year    Int
+  month   Int
+  content String
+
+  @@unique([year, month])
+  @@schema("jeek")
+}
+
 model Subscriber {
   id             String    @id @default(cuid())
   email          String    @unique

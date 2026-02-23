@@ -38,7 +38,10 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 **Given** 사용자가 아카이브 페이지에 접속하면
 **When** 과거 다이제스트가 존재할 때
-**Then** 날짜별 다이제스트 목록이 표시되고, 각 항목을 클릭해 열람할 수 있다
+**Then** 월별로 그룹된 다이제스트 목록이 표시된다
+**And** 각 월 헤더에 다이제스트 수, 총 아이템 수, 주요 카테고리가 표시된다
+**And** 가장 최근 월은 펼쳐진 상태로 표시되고, 이전 월은 접힌 상태로 표시된다
+**And** 각 날짜를 클릭해 해당 다이제스트를 열람할 수 있다
 
 ### US-6: 일일 자동 생성
 
@@ -82,6 +85,10 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 - **FR-8**: MUST - 카테고리별 필터 버튼 (데이터 있는 카테고리만)
 - **FR-9**: MUST - 뉴스 카드에 제목(출처 링크), 요약, whyItMatters 표시
 - **FR-10**: MUST - 날짜별 아카이브 페이지
+- **FR-30**: MUST - 아카이브 페이지에서 다이제스트를 월별로 그룹 표시
+- **FR-31**: MUST - 월별 요약 통계 (다이제스트 수, 총 아이템 수, 카테고리 분포)
+- **FR-32**: SHOULD - 월별 섹션 접기/펼치기 (최신 월은 기본 펼침)
+- **FR-33**: SHOULD - 월별 AI 요약 (Gemini가 해당 월 뉴스를 3~4문장으로 요약, DB 캐싱)
 - **FR-11**: MUST - 이메일 구독 전용 페이지 (/subscribe)
 - **FR-18**: MUST - 아이폰 목업 UI (데스크톱), 풀스크린 (모바일)
 - **FR-19**: MUST - 다크모드 지원 (토글 전환)
@@ -151,6 +158,15 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 | sourceUrl | String | 원본 기사 URL |
 | order | Int | 표시 순서 |
 
+### MonthlySummary
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | String (CUID) | PK |
+| year | Int | 연도 |
+| month | Int | 월 (0-indexed) |
+| content | String | AI 생성 월간 요약 텍스트 |
+
 ### Subscriber
 
 | Field | Type | Description |
@@ -184,7 +200,16 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ### GET /api/cron/generate
 
-다이제스트 생성 (Bearer 인증)
+다이제스트 생성 + 이번 달 월간 요약 갱신 (Bearer 인증)
 
+- 매일 다이제스트 생성 후 이번 달 월간 요약도 갱신 (force)
+- 매월 1일에는 지난 달 요약도 최종 확정
 - **Response 200**: `{ ok: true, id: string }`
+- **Response 401**: `{ error: "Unauthorized" }`
+
+### GET /api/cron/monthly-summary
+
+지난 달 월간 요약 수동 생성 (Bearer 인증)
+
+- **Response 200**: `{ ok: true, year: number, month: number, content: string }`
 - **Response 401**: `{ error: "Unauthorized" }`

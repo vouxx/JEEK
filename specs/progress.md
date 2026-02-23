@@ -115,6 +115,36 @@
 
 ---
 
+## Session 2026-02-23 (2)
+
+### 아카이브 월별 그룹핑 + AI 요약 ✅
+
+**작업 내역**:
+
+1. 아카이브 페이지 월별 그룹핑 — 플랫 날짜 리스트 → 월 단위 접기/펼치기 섹션
+2. 월별 요약 통계 — 다이제스트 수, 총 아이템 수, 상위 3개 카테고리 pill
+3. MonthlySummary DB 모델 추가 — Gemini AI 월간 요약 텍스트 저장
+4. `generateMonthlySummary()` — 해당 월 뉴스를 Gemini로 3~4문장 요약, upsert로 갱신
+5. Daily cron 연동 — 매일 다이제스트 생성 후 이번 달 요약 갱신 (force), 1일에 지난 달 확정
+6. 월간 요약 수동 트리거 API (`/api/cron/monthly-summary`)
+
+**생성 파일**:
+
+- `src/components/MonthSection.tsx` — 월별 접기/펼치기 섹션 컴포넌트
+- `src/app/api/cron/monthly-summary/route.ts` — 월간 요약 수동 생성 API
+
+**수정 파일**:
+
+- `prisma/schema.prisma` — MonthlySummary 모델 추가
+- `src/types/digest.ts` — MonthSummary 인터페이스 추가
+- `src/lib/digest.ts` — `getArchiveData()` 추가 (월별 그룹핑 + 요약 조회)
+- `src/lib/gemini.ts` — `generateMonthlySummary()` 추가 (force/upsert 지원)
+- `src/app/archive/page.tsx` — 월별 그룹 UI로 교체
+- `src/app/api/cron/generate/route.ts` — 매일 월간 요약 갱신 연동
+- `specs/SPEC.md` — US-5 갱신, FR-30~33, MonthlySummary 모델, API 엔드포인트 추가
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |

@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Category, NewsItem } from "@/types/digest";
 import { CATEGORIES } from "./constants";
+import { prisma } from "./prisma";
 
 let _ai: GoogleGenAI | null = null;
 
@@ -212,4 +213,82 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
     console.error(`JSON parse error for ${category}:`, e);
     return [];
   }
+}
+
+/**
+ * 특정 월의 다이제스트 아이템을 기반으로 월간 요약을 생성하고 DB에 저장.
+ * force=true이면 기존 요약을 덮어씀 (이번 달 매일 갱신용).
+ */
+export async function generateMonthlySummary(year: number, month: number, force = false): Promise<string> {
+  if (!force) {
+    const existing = await prisma.monthlySummary.findUnique({
+      where: { year_month: { year, month } },
+    });
+    if (existing) return existing.content;
+  }
+
+  // 해당 월의 다이제스트 아이템 조회
+  const startDate = new Date(Date.UTC(year, month, 1));
+  const endDate = new Date(Date.UTC(year, month + 1, 1));
+
+  const items = await prisma.digestItem.findMany({
+    where: {
+      digest: {
+        date: { gte: startDate, lt: endDate },
+      },
+    },
+    select: { category: true, title: true, summary: true },
+    orderBy: { digest: { date: "asc" } },
+  });
+
+  if (items.length === 0) {
+    return "";
+  }
+
+  // 카테고리별로 제목 그룹핑하여 프롬프트 구성
+  const grouped = new Map<string, string[]>();
+  for (const item of items) {
+    const label = CATEGORIES[item.category as Category]?.label ?? item.category;
+    if (!grouped.has(label)) grouped.set(label, []);
+    grouped.get(label)!.push(`- ${item.title}: ${item.summary}`);
+  }
+
+  let input = "";
+  for (const [label, titles] of grouped) {
+    input += `\n[${label}]\n${titles.join("\n")}\n`;
+  }
+
+  const monthLabel = new Date(year, month).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+  });
+
+  const response = await getAI().models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: `다음은 ${monthLabel}에 다뤄진 기술 뉴스 목록이야:\n${input}`,
+    config: {
+      systemInstruction: `너는 ZEEK 기술 뉴스레터의 월간 요약 작성자야.
+주어진 뉴스 목록을 분석해서 해당 월의 핵심 트렌드와 주요 이슈를 3~4문장으로 요약해줘.
+
+규칙:
+- 한국어로 작성
+- 가장 영향력 있었던 뉴스와 트렌드를 중심으로
+- 개발자/테크 종사자 관점에서 의미 있는 흐름을 짚어줘
+- 간결하고 읽기 쉬운 문체
+- JSON이 아닌 일반 텍스트로 반환`,
+      temperature: 0.3,
+    },
+  });
+
+  const content = response.text?.trim() ?? "";
+
+  // DB에 저장 (upsert: 있으면 갱신, 없으면 생성)
+  await prisma.monthlySummary.upsert({
+    where: { year_month: { year, month } },
+    update: { content },
+    create: { year, month, content },
+  });
+
+  console.log(`[monthly-summary] Generated for ${monthLabel}`);
+  return content;
 }

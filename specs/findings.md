@@ -35,6 +35,8 @@
 | `html: await render(...)` 방식 | Resend `react:` 옵션이 `@react-email/render` 해석 실패 → 명시적 렌더링으로 전환 |
 | Gmail 구독 제한 | Resend `onboarding@resend.dev` 테스트 도메인은 계정 이메일로만 발송 가능. 커스텀 도메인 등록 전까지 Gmail만 허용 |
 | KST 날짜 유틸 | Vercel(UTC 서버)에서 `new Date().setHours(0,0,0,0)` 사용 시 KST 날짜와 불일치 → `getTodayKST()` 도입 |
+| 월간 요약 upsert | 이번 달 요약은 매일 갱신(force=true)해야 하므로 create 대신 upsert 사용. 지난 달은 1일에 최종 확정 |
+| Prisma 클라이언트 재생성 | 스키마 변경 후 `prisma db push`만으로는 클라이언트 타입이 갱신 안 됨. 반드시 `prisma generate` 실행 필요 |
 
 ## Issues Encountered
 
@@ -51,6 +53,8 @@
 - DB 스키마: `prisma/schema.prisma`
 - 크론 엔드포인트: `src/app/api/cron/generate/route.ts`
 - 이메일 재발송: `src/app/api/cron/send/route.ts`
+- 월간 요약 생성: `src/app/api/cron/monthly-summary/route.ts`
+- 아카이브 월별 섹션: `src/components/MonthSection.tsx`
 
 ### 참고 문서
 

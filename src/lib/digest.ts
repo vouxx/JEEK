@@ -4,7 +4,7 @@ import { fetchNewsForCategory } from "./gemini";
 import { CATEGORY_KEYS, CATEGORIES } from "./constants";
 import { DailyDigest } from "@/emails/DailyDigest";
 import { render } from "@react-email/render";
-import type { CategoryDigest } from "@/types/digest";
+import type { CategoryDigest, MonthSummary } from "@/types/digest";
 import type { Category } from "@/types/digest";
 
 /** Vercel(UTC) 서버에서도 KST 기준 오늘 날짜를 반환 */
@@ -189,10 +189,85 @@ export async function getDigestByDate(date: Date) {
   });
 }
 
-export async function getDigestDates() {
+export async function getArchiveData(): Promise<MonthSummary[]> {
   const digests = await prisma.digest.findMany({
-    select: { date: true },
+    select: {
+      date: true,
+      items: { select: { category: true } },
+    },
     orderBy: { date: "desc" },
   });
-  return digests.map((d) => d.date);
+
+  const monthMap = new Map<string, MonthSummary>();
+
+  for (const digest of digests) {
+    const year = digest.date.getUTCFullYear();
+    const month = digest.date.getUTCMonth();
+    const key = `${year}-${month}`;
+
+    if (!monthMap.has(key)) {
+      monthMap.set(key, {
+        year,
+        month,
+        label: new Date(year, month).toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+        }),
+        digestCount: 0,
+        totalItems: 0,
+        categoryBreakdown: [],
+        dates: [],
+      });
+    }
+
+    const entry = monthMap.get(key)!;
+    entry.digestCount += 1;
+    entry.totalItems += digest.items.length;
+    entry.dates.push({
+      dateStr: digest.date.toISOString().split("T")[0],
+      displayStr: digest.date.toLocaleDateString("ko-KR", {
+        month: "long",
+        day: "numeric",
+        weekday: "long",
+      }),
+      itemCount: digest.items.length,
+    });
+  }
+
+  // Category breakdown per month
+  for (const digest of digests) {
+    const year = digest.date.getUTCFullYear();
+    const month = digest.date.getUTCMonth();
+    const entry = monthMap.get(`${year}-${month}`)!;
+
+    for (const item of digest.items) {
+      const existing = entry.categoryBreakdown.find(
+        (c) => c.category === item.category
+      );
+      if (existing) {
+        existing.count += 1;
+      } else {
+        const cat = CATEGORIES[item.category as Category];
+        entry.categoryBreakdown.push({
+          category: item.category,
+          label: cat?.label ?? item.category,
+          count: 1,
+        });
+      }
+    }
+  }
+
+  // Sort category breakdowns by count desc
+  for (const entry of monthMap.values()) {
+    entry.categoryBreakdown.sort((a, b) => b.count - a.count);
+  }
+
+  // 월간 요약 조회
+  const summaries = await prisma.monthlySummary.findMany();
+  for (const s of summaries) {
+    const entry = monthMap.get(`${s.year}-${s.month}`);
+    if (entry) entry.summary = s.content;
+  }
+
+  return Array.from(monthMap.values());
 }

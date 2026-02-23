@@ -21,3 +21,14 @@ export type Category =
   | "startups"
   | "open-source"
   | "science-tech";
+
+export interface MonthSummary {
+  year: number;
+  month: number;
+  label: string;
+  digestCount: number;
+  totalItems: number;
+  summary?: string;
+  categoryBreakdown: { category: string; label: string; count: number }[];
+  dates: { dateStr: string; displayStr: string; itemCount: number }[];
+}
