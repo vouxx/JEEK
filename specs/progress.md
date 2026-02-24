@@ -145,6 +145,34 @@
 
 ---
 
+## Session 2026-02-24
+
+### 크론 분리 + 병렬 처리 + 카테고리 드롭다운 ✅
+
+**작업 내역**:
+
+1. 크론 스케줄 분리: 생성 (KST 00:00) + 발송 (KST 08:00) 별도 크론
+2. `generateAndSendDigest` → `generateDigest` (생성 전용) 분리
+3. `sendTodayDigest`에 평일 체크 로직 추가
+4. Hobby 플랜 60초 타임아웃 대응: 순차 15초 대기 → 4개씩 배치 병렬 처리 + 5초 대기
+5. URL 검증 병렬화 (`Promise.all`)
+6. `maxDuration = 60` 설정 (크론 라우트 3개)
+7. 카테고리 필터: pill 버튼 → 커스텀 드롭다운 (기본값: 전체)
+8. "오늘의 다이제스트" 헤더 마진 축소
+
+**수정 파일**:
+
+- `vercel.json` — 크론 2개 분리 (generate + send)
+- `src/lib/digest.ts` — `generateDigest` 분리, 배치 병렬, `sendTodayDigest` 평일 체크
+- `src/lib/gemini.ts` — URL 검증 `Promise.all` 병렬화
+- `src/app/api/cron/generate/route.ts` — `generateDigest` 호출, `maxDuration = 60`
+- `src/app/api/cron/send/route.ts` — `maxDuration = 60`
+- `src/app/api/cron/monthly-summary/route.ts` — `maxDuration = 60`
+- `src/components/DigestList.tsx` — 커스텀 드롭다운 (바깥 클릭 닫힘, chevron 회전)
+- `src/app/page.tsx` — 헤더 마진 축소
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |

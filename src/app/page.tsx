@@ -19,7 +19,7 @@ export default async function HomePage() {
     <div className="px-6 py-6">
       {digest ? (
         <div className="animate-fade-in">
-          <div className="mb-10">
+          <div className="mb-5">
             <p className="text-xs font-medium tracking-wider text-neutral-400 dark:text-neutral-500 uppercase">{dateStr}</p>
             <h1 className="mt-1 text-lg font-bold text-neutral-900 dark:text-neutral-100">오늘의 다이제스트</h1>
           </div>

@@ -1,6 +1,8 @@
-import { generateAndSendDigest } from "@/lib/digest";
+import { generateDigest } from "@/lib/digest";
 import { generateMonthlySummary } from "@/lib/gemini";
 import { NextRequest } from "next/server";
+
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -9,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const digest = await generateAndSendDigest();
+    const digest = await generateDigest();
 
     const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
 

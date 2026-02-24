@@ -14,7 +14,8 @@ function getTodayKST(): Date {
   return new Date(dateStr + "T00:00:00.000Z");
 }
 
-export async function generateAndSendDigest() {
+/** 오늘자 다이제스트 콘텐츠만 생성 (이메일 발송 없음) */
+export async function generateDigest() {
   const today = getTodayKST();
 
   // Check if already generated today
@@ -26,14 +27,22 @@ export async function generateAndSendDigest() {
     return existing;
   }
 
-  // Fetch news for each category sequentially (Gemini free tier: 5 RPM)
+  // Fetch news in parallel batches (Gemini 2.5 Flash free tier: 10 RPM)
+  const batchSize = 4;
   const results: { category: Category; items: Awaited<ReturnType<typeof fetchNewsForCategory>> }[] = [];
-  for (const category of CATEGORY_KEYS) {
-    const items = await fetchNewsForCategory(category);
-    results.push({ category, items });
-    // Wait 15s between calls to stay under rate limit
-    if (category !== CATEGORY_KEYS[CATEGORY_KEYS.length - 1]) {
-      await new Promise((r) => setTimeout(r, 15000));
+
+  for (let i = 0; i < CATEGORY_KEYS.length; i += batchSize) {
+    const batch = CATEGORY_KEYS.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (category) => ({
+        category,
+        items: await fetchNewsForCategory(category),
+      }))
+    );
+    results.push(...batchResults);
+    // Wait between batches to respect rate limit
+    if (i + batchSize < CATEGORY_KEYS.length) {
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
 
@@ -57,64 +66,20 @@ export async function generateAndSendDigest() {
     include: { items: true },
   });
 
-  // 평일(월~금)에만 이메일 발송 (KST 기준)
-  const kstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDay();
-  const isWeekday = kstDay >= 1 && kstDay <= 5;
-
-  if (!isWeekday) {
-    console.log(
-      `Digest generated: ${digest.items.length} items (weekend — email skipped)`
-    );
-    return digest;
-  }
-
-  // Send emails to all active subscribers
-  const subscribers = await prisma.subscriber.findMany({
-    where: { active: true },
-  });
-
-  const categoryDigests: CategoryDigest[] = CATEGORY_KEYS.map((key) => ({
-    category: key,
-    label: CATEGORIES[key].label,
-    items: results
-      .find((r) => r.category === key)
-      ?.items ?? [],
-  }));
-
-  const dateStr = today.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-  for (const subscriber of subscribers) {
-    try {
-      await getResend().emails.send({
-        from: process.env.RESEND_FROM_EMAIL ?? "ZEEK <digest@zeek.dev>",
-        to: subscriber.email,
-        subject: `ZEEK Daily — ${dateStr}`,
-        html: await render(DailyDigest({
-          date: dateStr,
-          categories: categoryDigests,
-          unsubscribeUrl: `${appUrl}/unsubscribe?token=${subscriber.token}`,
-        })),
-      });
-    } catch (e) {
-      console.error(`Failed to send email to ${subscriber.email}:`, e);
-    }
-  }
-
-  console.log(
-    `Digest generated: ${digest.items.length} items, sent to ${subscribers.length} subscribers`
-  );
-
+  console.log(`Digest generated: ${digest.items.length} items`);
   return digest;
 }
 
-/** 오늘자 다이제스트의 이메일만 발송 (콘텐츠 생성 없이) */
+/** 오늘자 다이제스트의 이메일만 발송 (평일만, 콘텐츠 생성 없이) */
 export async function sendTodayDigest() {
+  // 평일(월~금)에만 이메일 발송 (KST 기준)
+  const kstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getDay();
+  const isWeekday = kstDay >= 1 && kstDay <= 5;
+  if (!isWeekday) {
+    console.log("Weekend — email skipped");
+    return { ok: true, sent: 0, total: 0, skipped: "weekend" };
+  }
+
   const today = getTodayKST();
 
   const digest = await prisma.digest.findUnique({

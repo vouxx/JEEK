@@ -167,42 +167,36 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       }
     }
 
-    // 각 아이템에 대해 매핑된 chunk URL 리졸브 + 접근성 검증
-    const items: NewsItem[] = [];
-    const usedUrls = new Set<string>();
+    // 각 아이템에 대해 매핑된 chunk URL 리졸브 + 접근성 검증 (병렬)
+    const resolvedItems = await Promise.all(
+      parsed.map(async (item, i) => {
+        const chunkIndices = itemChunkMap.get(i);
+        if (!chunkIndices) return null;
 
-    for (let i = 0; i < parsed.length; i++) {
-      const item = parsed[i];
-      const chunkIndices = itemChunkMap.get(i);
-
-      // 매핑된 grounding chunk에서 URL 추출 + 리졸브
-      // 여러 chunk가 매핑된 경우 순서대로 시도
-      let resolvedUrl: string | null = null;
-
-      if (chunkIndices) {
         for (const idx of chunkIndices) {
           const chunk = groundingChunks[idx];
           if (!chunk?.web?.uri) continue;
           const url = await resolveAndVerifyUrl(chunk.web.uri);
-          if (url && !usedUrls.has(url)) {
-            resolvedUrl = url;
-            break;
-          }
+          if (url) return { ...item, sourceUrl: url };
         }
-      }
+        return null;
+      })
+    );
 
-      if (!resolvedUrl) {
-        console.log(`Skipping "${item.title}" — no verified URL`);
-        continue;
-      }
+    // 중복 URL 제거 후 최종 아이템 구성
+    const items: NewsItem[] = [];
+    const usedUrls = new Set<string>();
 
-      usedUrls.add(resolvedUrl);
+    for (const item of resolvedItems) {
+      if (!item) continue;
+      if (usedUrls.has(item.sourceUrl)) continue;
+      usedUrls.add(item.sourceUrl);
 
       items.push({
         title: item.title,
         summary: item.summary,
         whyItMatters: item.whyItMatters,
-        sourceUrl: resolvedUrl,
+        sourceUrl: item.sourceUrl,
         sourceHint: item.sourceHint,
       });
     }

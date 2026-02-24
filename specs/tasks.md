@@ -37,6 +37,9 @@ AI 기반 한국어 데일리 기술 뉴스레터 플랫폼 운영 및 개선
 - [x] 인트로 타이핑 애니메이션 (PhoneFrame 내)
 - [x] 아카이브 월별 그룹핑 + 요약 통계
 - [x] 월별 AI 요약 (Gemini, 매일 갱신, DB 캐싱)
+- [x] 크론 분리: 생성 (KST 00:00) + 발송 (KST 08:00)
+- [x] Hobby 플랜 타임아웃 대응: 배치 병렬 처리 + URL 병렬 검증
+- [x] 카테고리 필터: pill 버튼 → 커스텀 드롭다운
 
 ## Backlog
 
@@ -48,7 +51,7 @@ AI 기반 한국어 데일리 기술 뉴스레터 플랫폼 운영 및 개선
 |----------|-----------|
 | Gemini 2.5 Flash | Google Search 내장, 한국어 성능 우수 |
 | Neon PostgreSQL | Serverless, Vercel 호환 |
-| 15초 간격 호출 | Gemini free tier 5 RPM 제한 |
+| 4개씩 배치 병렬 + 5초 대기 | Gemini free tier 10 RPM + Hobby 60초 타임아웃 |
 | 카테고리 8개 확장 | 다양한 기술 분야 커버리지 |
 
 ## Errors Encountered
