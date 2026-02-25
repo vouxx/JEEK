@@ -1,16 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import type { Category, NewsItem } from "@/types/digest";
 import { CATEGORIES, CATEGORY_KEYS } from "./constants";
 import { prisma } from "./prisma";
-
-let _ai: GoogleGenAI | null = null;
-
-function getAI() {
-  if (!_ai) {
-    _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-  }
-  return _ai;
-}
 
 function buildCategoryList(): string {
   return CATEGORY_KEYS.map((key) => `- "${key}": ${CATEGORIES[key].description}`).join("\n");
@@ -98,28 +88,55 @@ async function resolveGroundingUrl(url: string): Promise<string | null> {
   }
 }
 
-/** Gemini API 호출 (429 리트라이 포함) */
-async function callGemini(
+interface GeminiRawResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+    groundingMetadata?: {
+      groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
+      groundingSupports?: Array<{
+        segment?: { startIndex?: number; text?: string };
+        groundingChunkIndices?: number[];
+      }>;
+    };
+  }>;
+}
+
+/** Gemini API 직접 호출 (SDK의 grounding metadata 누락 이슈 우회) */
+async function callGeminiRaw(
   contents: string,
-  config: { systemInstruction: string; tools?: object[]; temperature: number },
-) {
+  systemInstruction: string,
+  options?: { tools?: object[]; temperature?: number },
+): Promise<GeminiRawResponse | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+  const body: Record<string, unknown> = {
+    contents: [{ parts: [{ text: contents }] }],
+    systemInstruction: { parts: [{ text: systemInstruction }] },
+    generationConfig: { temperature: options?.temperature ?? 0.3 },
+  };
+  if (options?.tools) body.tools = options.tools;
+
   for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await getAI().models.generateContent({
-        model: "gemini-2.5-flash",
-        contents,
-        config,
-      });
-    } catch (e: unknown) {
-      const status = (e as { status?: number }).status;
-      if (status === 429 && attempt < 2) {
-        const delay = 30 * (attempt + 1);
-        console.log(`Rate limited, retrying in ${delay}s (attempt ${attempt + 1})`);
-        await new Promise((r) => setTimeout(r, delay * 1000));
-        continue;
-      }
-      throw e;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120000),
+    });
+
+    if (res.status === 429 && attempt < 2) {
+      const delay = 30 * (attempt + 1);
+      console.log(`Rate limited, retrying in ${delay}s (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, delay * 1000));
+      continue;
     }
+
+    if (!res.ok) {
+      throw new Error(`Gemini API error: ${res.status} ${await res.text().catch(() => "")}`);
+    }
+
+    return (await res.json()) as GeminiRawResponse;
   }
   return null;
 }
@@ -132,18 +149,16 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
   const result = new Map<Category, NewsItem[]>();
   for (const key of CATEGORY_KEYS) result.set(key, []);
 
-  const response = await callGemini(
+  const response = await callGeminiRaw(
     "오늘의 주요 뉴스와 커뮤니티 화제 글을 모든 카테고리에 대해 찾아줘.",
-    {
-      systemInstruction: SYSTEM_PROMPT,
-      tools: [{ googleSearch: {} }],
-      temperature: 0.3,
-    },
+    SYSTEM_PROMPT,
+    { tools: [{ google_search: {} }], temperature: 0.3 },
   );
 
   if (!response) return result;
 
-  const text = response.text ?? "";
+  const candidate = response.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text ?? "";
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     console.error("Failed to parse Gemini response:", text.slice(0, 200));
@@ -160,10 +175,8 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
     }>;
 
     // Grounding metadata에서 URL 수집
-    const groundingChunks =
-      response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-    const groundingSupports =
-      response.candidates?.[0]?.groundingMetadata?.groundingSupports ?? [];
+    const groundingChunks = candidate?.groundingMetadata?.groundingChunks ?? [];
+    const groundingSupports = candidate?.groundingMetadata?.groundingSupports ?? [];
 
     console.log(`[grounding] chunks: ${groundingChunks.length}, supports: ${groundingSupports.length}, parsed: ${parsed.length}`);
 
@@ -171,7 +184,7 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
     const itemChunkMap = new Map<number, Set<number>>();
 
     // 전략 1: startIndex 기반 위치 매핑
-    const rawText = response.candidates?.[0]?.content?.parts?.[0]?.text ?? text;
+    const rawText = text;
     const itemBoundaries: number[] = parsed.map((item) => {
       const pos = rawText.indexOf(item.title);
       return pos >= 0 ? pos : Infinity;
@@ -315,10 +328,9 @@ export async function generateMonthlySummary(year: number, month: number, force 
     month: "long",
   });
 
-  const response = await callGemini(
+  const response = await callGeminiRaw(
     `다음은 ${monthLabel}에 다뤄진 기술 뉴스 목록이야:\n${input}`,
-    {
-      systemInstruction: `너는 ZEEK 기술 뉴스레터의 월간 요약 작성자야.
+    `너는 ZEEK 기술 뉴스레터의 월간 요약 작성자야.
 주어진 뉴스 목록을 분석해서 해당 월의 핵심 트렌드와 주요 이슈를 3~4문장으로 요약해줘.
 
 규칙:
@@ -327,11 +339,10 @@ export async function generateMonthlySummary(year: number, month: number, force 
 - 개발자/테크 종사자 관점에서 의미 있는 흐름을 짚어줘
 - 간결하고 읽기 쉬운 문체
 - JSON이 아닌 일반 텍스트로 반환`,
-      temperature: 0.3,
-    },
+    { temperature: 0.3 },
   );
 
-  const content = response?.text?.trim() ?? "";
+  const content = response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 
   // DB에 저장 (upsert: 있으면 갱신, 없으면 생성)
   await prisma.monthlySummary.upsert({
