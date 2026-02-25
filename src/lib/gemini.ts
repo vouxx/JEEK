@@ -74,22 +74,21 @@ function extractWords(text: string): string[] {
 }
 
 /**
- * grounding redirect URL을 실제 URL로 리졸브하고 접근 가능한지 확인.
- * 성공 시 최종 URL, 실패 시 null 반환.
+ * grounding redirect URL에서 실제 기사 URL을 추출.
+ * Google의 302 리다이렉트 Location 헤더에서 바로 가져옴.
  */
-async function resolveAndVerifyUrl(url: string): Promise<string | null> {
+async function resolveGroundingUrl(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
+      method: "HEAD",
+      redirect: "manual",
       signal: AbortSignal.timeout(5000),
-      headers: { "User-Agent": "ZEEK-Bot/1.0" },
     });
-    if (!res.ok) return null;
-    // 홈페이지나 카테고리 페이지가 아닌 구체적 기사 URL만 허용
-    const path = new URL(res.url).pathname;
-    if (path.length <= 1) return null; // "/" 만 있는 홈페이지
-    return res.url;
+    const location = res.headers.get("location");
+    if (!location) return null;
+    const path = new URL(location).pathname;
+    if (path.length <= 1) return null;
+    return location;
   } catch {
     return null;
   }
@@ -222,7 +221,7 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
             .filter((c) => c?.web?.uri);
 
           const results = await Promise.all(
-            candidates.map((c) => resolveAndVerifyUrl(c!.web!.uri!))
+            candidates.map((c) => resolveGroundingUrl(c!.web!.uri!))
           );
           const url = results.find((u) => u !== null);
           if (url) return { ...item, sourceUrl: url };
