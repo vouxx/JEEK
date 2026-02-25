@@ -48,7 +48,8 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 **Given** 매일 UTC 15:00 (KST 00:00)에 생성 크론이 실행되면
 **When** 오늘(KST) 다이제스트가 아직 없을 때
-**Then** 8개 카테고리의 뉴스를 4개씩 배치 병렬로 수집하여 DB에 저장한다
+**Then** Gemini API 1회 호출로 모든 카테고리의 뉴스를 수집하여 DB에 저장한다
+**And** 빈 다이제스트(아이템 0개)가 있으면 삭제 후 재생성한다
 
 **Given** 매일 UTC 23:00 (KST 08:00)에 발송 크론이 실행되면
 **When** 평일(월~금)이면
@@ -62,10 +63,10 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 ### 뉴스 수집
 
 - **FR-1**: MUST - Gemini AI + Google Search로 지난 24시간 뉴스 및 커뮤니티 화제 글 수집
-- **FR-2**: MUST - 카테고리당 7~10개 아이템 요청, 검증 통과한 것만 반환
+- **FR-2**: MUST - 1회 API 호출로 전체 카테고리 30~40개 아이템 요청 (카테고리당 3~5개)
 - **FR-3**: MUST - 한국어로 작성, 영어/한국어 소스 모두 검색
 - **FR-4**: MUST - 각 아이템에 title, summary, whyItMatters, sourceHint 포함
-- **FR-5**: MUST - grounding redirect URL → 실제 URL 리졸브 + GET 접근 검증, 실패 시 아이템 제외
+- **FR-5**: MUST - grounding redirect URL → 302 Location 추출로 실제 URL 확보, 실패 시 Google 검색 링크 fallback
 - **FR-29**: MUST - 소스 범위: 뉴스 매체, 개발자 커뮤니티(HN, Reddit), 블로그, GitHub 등
 
 ### 카테고리
@@ -122,10 +123,10 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ## Constraints
 
-- **CON-1**: Gemini free tier 제한 (10 RPM) → 4개씩 배치 병렬 처리 + 배치 간 5초 대기
+- **CON-1**: Gemini free tier 제한 (5 RPM, 20 RPD) → 전체 카테고리 1회 통합 호출 (일 2회: 다이제스트 + 월간 요약)
 - **CON-2**: 뉴스 수집은 지난 24시간 이내만
 - **CON-3**: Vercel Cron 2개: 생성 UTC 15:00 (KST 00:00) + 발송 UTC 23:00 (KST 08:00), 이메일은 평일만
-- **CON-6**: Vercel Hobby 플랜 함수 타임아웃 60초 → 병렬 배치 처리 필수
+- **CON-6**: Vercel Hobby 플랜 함수 타임아웃 → maxDuration 300초 설정 (Gemini API 응답 대기)
 - **CON-4**: Neon serverless PostgreSQL 사용
 - **CON-5**: Resend 테스트 도메인(`onboarding@resend.dev`) 사용 → Gmail 구독자만 허용 (커스텀 도메인 등록 시 해제 가능)
 
@@ -133,8 +134,8 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 
 ## Success Criteria
 
-- **SC-1**: 매일 8개 카테고리에서 40~56개 뉴스 아이템 수집
-- **SC-2**: 출처 URL 검증 성공률 70% 이상 (Google News fallback 30% 이하)
+- **SC-1**: 매일 8개 카테고리에서 30~40개 뉴스 아이템 수집
+- **SC-2**: 출처 URL 검증 성공률 80% 이상 (Google 검색 fallback 20% 이하)
 - **SC-3**: 구독자 이메일 발송 성공률 95% 이상
 - **SC-4**: 다이제스트 생성 소요 시간 3분 이내
 

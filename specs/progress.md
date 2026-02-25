@@ -173,6 +173,37 @@
 
 ---
 
+## Session 2026-02-25
+
+### 크론 자동 갱신 전면 수정 — 실제 기사 URL 확보 ✅
+
+**문제 상황**:
+
+- 크론 48시간 미실행 (504 타임아웃)
+- 실행 시 Gemini free tier 20 RPD 초과
+- URL 리졸브 0% (모든 링크가 Google 검색 fallback)
+
+**작업 내역**:
+
+1. `maxDuration` 60 → 300 (크론 라우트 2개)
+2. Gemini free tier 실제 제한 발견 (20 RPD) → 8개 개별 호출에서 1회 통합 호출로 전환
+3. `@google/genai` SDK grounding metadata 누락 버그 발견 → SDK 제거, REST API `fetch()` 직접 호출
+4. URL 리졸브: 302 Location 헤더 추출 방식으로 변경
+5. URL 실패 시 Google 검색 링크 fallback (아이템 제외 대신)
+6. 빈 다이제스트(아이템 0개) 감지 시 삭제 후 재생성 로직 추가
+7. Gemini API 키 별도 Google Cloud 프로젝트에서 발급 (RPD 한도 리셋)
+
+**결과**: 18개 아이템 중 17개 실제 기사 URL 확보 (94% 검증률)
+
+**수정 파일**:
+
+- `src/lib/gemini.ts` — 전면 재작성: SDK→REST API, 통합 호출, 302 URL 리졸브, fallback
+- `src/lib/digest.ts` — `fetchAllNews()` 사용, 빈 다이제스트 재생성
+- `src/app/api/cron/generate/route.ts` — `maxDuration` 300
+- `src/app/api/cron/send/route.ts` — `maxDuration` 300, 다이제스트 없으면 자동 생성 fallback
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |
