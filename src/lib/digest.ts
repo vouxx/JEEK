@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { getResend } from "./resend";
-import { fetchNewsForCategory } from "./gemini";
+import { fetchAllNews } from "./gemini";
 import { CATEGORY_KEYS, CATEGORIES } from "./constants";
 import { DailyDigest } from "@/emails/DailyDigest";
 import { render } from "@react-email/render";
@@ -27,25 +27,16 @@ export async function generateDigest() {
     return existing;
   }
 
-  // Fetch news sequentially with delay (Gemini 2.5 Flash free tier: 5 RPM)
-  const results: { category: Category; items: Awaited<ReturnType<typeof fetchNewsForCategory>> }[] = [];
-
-  for (let i = 0; i < CATEGORY_KEYS.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 15000));
-    const category = CATEGORY_KEYS[i];
-    results.push({
-      category,
-      items: await fetchNewsForCategory(category),
-    });
-  }
+  // 1회 API 호출로 모든 카테고리 뉴스 가져오기 (Gemini free tier 20 RPD 대응)
+  const newsMap = await fetchAllNews();
 
   // Store in database
   const digest = await prisma.digest.create({
     data: {
       date: today,
       items: {
-        create: results.flatMap(({ category, items }) =>
-          items.map((item, index) => ({
+        create: CATEGORY_KEYS.flatMap((category) =>
+          (newsMap.get(category) ?? []).map((item, index) => ({
             category,
             title: item.title,
             summary: item.summary,

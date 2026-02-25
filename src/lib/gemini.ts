@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { Category, NewsItem } from "@/types/digest";
-import { CATEGORIES } from "./constants";
+import { CATEGORIES, CATEGORY_KEYS } from "./constants";
 import { prisma } from "./prisma";
 
 let _ai: GoogleGenAI | null = null;
@@ -10,6 +10,10 @@ function getAI() {
     _ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   }
   return _ai;
+}
+
+function buildCategoryList(): string {
+  return CATEGORY_KEYS.map((key) => `- "${key}": ${CATEGORIES[key].description}`).join("\n");
 }
 
 const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴스 큐레이터야.
@@ -22,7 +26,13 @@ const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴
 - 오픈소스: GitHub Trending, 주요 프로젝트 릴리스 노트
 - 커뮤니티에서 화제가 되는 글, 토론, 프로젝트도 포함해줘
 
-반드시 한국어로 작성하고, JSON 배열로 7~10개 아이템을 반환해줘. 각 아이템은 다음 필드를 포함해야 해:
+카테고리 목록:
+${buildCategoryList()}
+
+반드시 한국어로 작성하고, JSON 배열로 반환해줘.
+각 카테고리당 3~5개, 총 30~40개 아이템을 반환해줘.
+각 아이템은 다음 필드를 포함해야 해:
+- "category": 위 카테고리 목록에서 해당하는 키 (예: "ai-ml", "web-dev")
 - "title": 간결한 헤드라인 (40자 이내)
 - "summary": 한 문장으로 요약
 - "whyItMatters": 개발자/테크 종사자가 왜 관심을 가져야 하는지 한 문장
@@ -31,12 +41,14 @@ const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴
 예시:
 [
   {
+    "category": "ai-ml",
     "title": "OpenAI, GPT-5 정식 출시",
     "summary": "OpenAI가 네이티브 함수 호출과 환각 감소 기능을 탑재한 GPT-5를 공개했다.",
     "whyItMatters": "AI 기반 앱 개발의 복잡도가 크게 줄어들 전망이다.",
     "sourceHint": "The Verge"
   },
   {
+    "category": "web-dev",
     "title": "Bun 2.0 릴리스, Node.js 호환성 대폭 개선",
     "summary": "Bun이 2.0을 출시하며 Node.js 모듈 호환성을 95%까지 끌어올렸다.",
     "whyItMatters": "Node.js 대체재로서 프로덕션 도입 장벽이 크게 낮아졌다.",
@@ -49,6 +61,7 @@ const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴
 - 중요도와 개발자 관련성을 기준으로 우선순위 결정
 - 사실에 기반하여 작성, 추측 금지
 - 영어/한국어 소스 모두 검색하되, 결과는 반드시 한국어로 작성
+- 모든 카테고리를 빠짐없이 포함
 - JSON 배열만 반환, 다른 텍스트 없이`;
 
 /** 구두점 제거 후 단어 분리 */
@@ -82,45 +95,61 @@ async function resolveAndVerifyUrl(url: string): Promise<string | null> {
   }
 }
 
-export async function fetchNewsForCategory(category: Category): Promise<NewsItem[]> {
-  const categoryInfo = CATEGORIES[category];
-
-  let response;
+/** Gemini API 호출 (429 리트라이 포함) */
+async function callGemini(
+  contents: string,
+  config: { systemInstruction: string; tools?: object[]; temperature: number },
+) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      response = await getAI().models.generateContent({
+      return await getAI().models.generateContent({
         model: "gemini-2.5-flash",
-        contents: `오늘의 주요 뉴스와 커뮤니티 화제 글을 찾아줘. 카테고리: ${categoryInfo.description}`,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          tools: [{ googleSearch: {} }],
-          temperature: 0.3,
-        },
+        contents,
+        config,
       });
-      break;
     } catch (e: unknown) {
       const status = (e as { status?: number }).status;
       if (status === 429 && attempt < 2) {
-        console.log(`[${category}] Rate limited, retrying in 15s (attempt ${attempt + 1})`);
-        await new Promise((r) => setTimeout(r, 15000));
+        const delay = 30 * (attempt + 1);
+        console.log(`Rate limited, retrying in ${delay}s (attempt ${attempt + 1})`);
+        await new Promise((r) => setTimeout(r, delay * 1000));
         continue;
       }
       throw e;
     }
   }
+  return null;
+}
 
-  if (!response) return [];
+/**
+ * 모든 카테고리의 뉴스를 1회 API 호출로 가져옴.
+ * Gemini free tier 일일 20회 제한 대응.
+ */
+export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
+  const result = new Map<Category, NewsItem[]>();
+  for (const key of CATEGORY_KEYS) result.set(key, []);
+
+  const response = await callGemini(
+    "오늘의 주요 뉴스와 커뮤니티 화제 글을 모든 카테고리에 대해 찾아줘.",
+    {
+      systemInstruction: SYSTEM_PROMPT,
+      tools: [{ googleSearch: {} }],
+      temperature: 0.3,
+    },
+  );
+
+  if (!response) return result;
 
   const text = response.text ?? "";
-
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    console.error(`Failed to parse Gemini response for ${category}:`, text);
-    return [];
+    console.error("Failed to parse Gemini response:", text.slice(0, 200));
+    return result;
   }
 
   try {
     const parsed = JSON.parse(jsonMatch[0]) as Array<{
+      category: string;
       title: string;
       summary: string;
       whyItMatters: string;
@@ -136,7 +165,7 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
     // support → 아이템 매핑 (2가지 전략 병행)
     const itemChunkMap = new Map<number, Set<number>>();
 
-    // 전략 1: startIndex 기반 위치 매핑 (rawText에서 아이템 경계 탐지)
+    // 전략 1: startIndex 기반 위치 매핑
     const rawText = response.candidates?.[0]?.content?.parts?.[0]?.text ?? text;
     const itemBoundaries: number[] = parsed.map((item) => {
       const pos = rawText.indexOf(item.title);
@@ -161,7 +190,7 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       }
     }
 
-    // 전략 2: 텍스트 유사도 기반 fallback (전략 1에서 매핑 안 된 아이템용)
+    // 전략 2: 텍스트 유사도 기반 fallback
     for (let i = 0; i < parsed.length; i++) {
       if (itemChunkMap.has(i)) continue;
       const item = parsed[i];
@@ -182,7 +211,7 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       }
     }
 
-    // 각 아이템에 대해 매핑된 chunk URL 리졸브 + 접근성 검증 (전체 병렬)
+    // URL 리졸브 (전체 병렬)
     const resolvedItems = await Promise.all(
       parsed.map(async (item, i) => {
         const chunkIndices = itemChunkMap.get(i);
@@ -201,16 +230,18 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       })
     );
 
-    // 중복 URL 제거 후 최종 아이템 구성
-    const items: NewsItem[] = [];
+    // 카테고리별로 분류 + 중복 URL 제거
     const usedUrls = new Set<string>();
 
     for (const item of resolvedItems) {
       if (!item) continue;
       if (usedUrls.has(item.sourceUrl)) continue;
-      usedUrls.add(item.sourceUrl);
 
-      items.push({
+      const category = item.category as Category;
+      if (!result.has(category)) continue;
+
+      usedUrls.add(item.sourceUrl);
+      result.get(category)!.push({
         title: item.title,
         summary: item.summary,
         whyItMatters: item.whyItMatters,
@@ -219,11 +250,12 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       });
     }
 
-    console.log(`[${category}] ${items.length}/${parsed.length} items with verified URLs`);
-    return items;
+    const total = Array.from(result.values()).reduce((sum, items) => sum + items.length, 0);
+    console.log(`[all] ${total}/${parsed.length} items with verified URLs`);
+    return result;
   } catch (e) {
-    console.error(`JSON parse error for ${category}:`, e);
-    return [];
+    console.error("JSON parse error:", e);
+    return result;
   }
 }
 
@@ -275,10 +307,9 @@ export async function generateMonthlySummary(year: number, month: number, force 
     month: "long",
   });
 
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: `다음은 ${monthLabel}에 다뤄진 기술 뉴스 목록이야:\n${input}`,
-    config: {
+  const response = await callGemini(
+    `다음은 ${monthLabel}에 다뤄진 기술 뉴스 목록이야:\n${input}`,
+    {
       systemInstruction: `너는 ZEEK 기술 뉴스레터의 월간 요약 작성자야.
 주어진 뉴스 목록을 분석해서 해당 월의 핵심 트렌드와 주요 이슈를 3~4문장으로 요약해줘.
 
@@ -290,9 +321,9 @@ export async function generateMonthlySummary(year: number, month: number, force 
 - JSON이 아닌 일반 텍스트로 반환`,
       temperature: 0.3,
     },
-  });
+  );
 
-  const content = response.text?.trim() ?? "";
+  const content = response?.text?.trim() ?? "";
 
   // DB에 저장 (upsert: 있으면 갱신, 없으면 생성)
   await prisma.monthlySummary.upsert({
