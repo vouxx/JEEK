@@ -211,22 +211,26 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
       }
     }
 
-    // URL 리졸브 (전체 병렬)
+    // URL 리졸브 (전체 병렬) — 실패 시 Google 검색 링크 fallback
     const resolvedItems = await Promise.all(
       parsed.map(async (item, i) => {
         const chunkIndices = itemChunkMap.get(i);
-        if (!chunkIndices) return null;
 
-        const candidates = [...chunkIndices]
-          .map((idx) => groundingChunks[idx])
-          .filter((c) => c?.web?.uri);
+        if (chunkIndices) {
+          const candidates = [...chunkIndices]
+            .map((idx) => groundingChunks[idx])
+            .filter((c) => c?.web?.uri);
 
-        const results = await Promise.all(
-          candidates.map((c) => resolveAndVerifyUrl(c!.web!.uri!))
-        );
-        const url = results.find((u) => u !== null);
-        if (url) return { ...item, sourceUrl: url };
-        return null;
+          const results = await Promise.all(
+            candidates.map((c) => resolveAndVerifyUrl(c!.web!.uri!))
+          );
+          const url = results.find((u) => u !== null);
+          if (url) return { ...item, sourceUrl: url };
+        }
+
+        // fallback: Google 검색 링크
+        const query = encodeURIComponent(`${item.title} ${item.sourceHint}`);
+        return { ...item, sourceUrl: `https://www.google.com/search?q=${query}` };
       })
     );
 
@@ -234,7 +238,6 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
     const usedUrls = new Set<string>();
 
     for (const item of resolvedItems) {
-      if (!item) continue;
       if (usedUrls.has(item.sourceUrl)) continue;
 
       const category = item.category as Category;
@@ -250,8 +253,8 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
       });
     }
 
-    const total = Array.from(result.values()).reduce((sum, items) => sum + items.length, 0);
-    console.log(`[all] ${total}/${parsed.length} items with verified URLs`);
+    const verified = resolvedItems.filter((i) => !i.sourceUrl.startsWith("https://www.google.com/search")).length;
+    console.log(`[all] ${verified}/${parsed.length} verified, ${resolvedItems.length} total`);
     return result;
   } catch (e) {
     console.error("JSON parse error:", e);

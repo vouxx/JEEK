@@ -21,10 +21,15 @@ export async function generateDigest() {
   // Check if already generated today
   const existing = await prisma.digest.findUnique({
     where: { date: today },
+    include: { items: true },
   });
-  if (existing) {
+  if (existing && existing.items.length > 0) {
     console.log("Digest already exists for today, skipping generation");
     return existing;
+  }
+  // 빈 다이제스트가 있으면 삭제 후 재생성
+  if (existing) {
+    await prisma.digest.delete({ where: { id: existing.id } });
   }
 
   // 1회 API 호출로 모든 카테고리 뉴스 가져오기 (Gemini free tier 20 RPD 대응)
