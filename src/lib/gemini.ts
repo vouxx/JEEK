@@ -75,15 +75,11 @@ async function resolveGroundingUrl(url: string): Promise<string | null> {
       signal: AbortSignal.timeout(10000),
     });
     const location = res.headers.get("location");
-    if (!location) {
-      console.log(`[url-resolve] No location header: status=${res.status} type=${res.type} url=${url.slice(0, 80)}`);
-      return null;
-    }
+    if (!location) return null;
     const path = new URL(location).pathname;
     if (path.length <= 1) return null;
     return location;
-  } catch (e) {
-    console.log(`[url-resolve] Error: ${(e as Error).message?.slice(0, 100)} url=${url.slice(0, 80)}`);
+  } catch {
     return null;
   }
 }
