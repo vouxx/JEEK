@@ -85,15 +85,31 @@ async function resolveAndVerifyUrl(url: string): Promise<string | null> {
 export async function fetchNewsForCategory(category: Category): Promise<NewsItem[]> {
   const categoryInfo = CATEGORIES[category];
 
-  const response = await getAI().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: `오늘의 주요 뉴스와 커뮤니티 화제 글을 찾아줘. 카테고리: ${categoryInfo.description}`,
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      tools: [{ googleSearch: {} }],
-      temperature: 0.3,
-    },
-  });
+  let response;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await getAI().models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `오늘의 주요 뉴스와 커뮤니티 화제 글을 찾아줘. 카테고리: ${categoryInfo.description}`,
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          tools: [{ googleSearch: {} }],
+          temperature: 0.3,
+        },
+      });
+      break;
+    } catch (e: unknown) {
+      const status = (e as { status?: number }).status;
+      if (status === 429 && attempt < 2) {
+        console.log(`[${category}] Rate limited, retrying in 15s (attempt ${attempt + 1})`);
+        await new Promise((r) => setTimeout(r, 15000));
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  if (!response) return [];
 
   const text = response.text ?? "";
 
