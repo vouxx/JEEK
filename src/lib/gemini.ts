@@ -80,16 +80,20 @@ function extractWords(text: string): string[] {
 async function resolveGroundingUrl(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      method: "HEAD",
+      method: "GET",
       redirect: "manual",
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(10000),
     });
     const location = res.headers.get("location");
-    if (!location) return null;
+    if (!location) {
+      console.log(`[url-resolve] No location header: status=${res.status} type=${res.type} url=${url.slice(0, 80)}`);
+      return null;
+    }
     const path = new URL(location).pathname;
     if (path.length <= 1) return null;
     return location;
-  } catch {
+  } catch (e) {
+    console.log(`[url-resolve] Error: ${(e as Error).message?.slice(0, 100)} url=${url.slice(0, 80)}`);
     return null;
   }
 }
