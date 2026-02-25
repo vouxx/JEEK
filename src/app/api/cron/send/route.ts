@@ -1,7 +1,7 @@
 import { generateDigest, sendTodayDigest, getLatestDigest } from "@/lib/digest";
 import { NextRequest } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");

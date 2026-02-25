@@ -77,7 +77,6 @@ async function resolveAndVerifyUrl(url: string): Promise<string | null> {
     const path = new URL(res.url).pathname;
     if (path.length <= 1) return null; // "/" 만 있는 홈페이지
     return res.url;
-    return null;
   } catch {
     return null;
   }
@@ -167,18 +166,21 @@ export async function fetchNewsForCategory(category: Category): Promise<NewsItem
       }
     }
 
-    // 각 아이템에 대해 매핑된 chunk URL 리졸브 + 접근성 검증 (병렬)
+    // 각 아이템에 대해 매핑된 chunk URL 리졸브 + 접근성 검증 (전체 병렬)
     const resolvedItems = await Promise.all(
       parsed.map(async (item, i) => {
         const chunkIndices = itemChunkMap.get(i);
         if (!chunkIndices) return null;
 
-        for (const idx of chunkIndices) {
-          const chunk = groundingChunks[idx];
-          if (!chunk?.web?.uri) continue;
-          const url = await resolveAndVerifyUrl(chunk.web.uri);
-          if (url) return { ...item, sourceUrl: url };
-        }
+        const candidates = [...chunkIndices]
+          .map((idx) => groundingChunks[idx])
+          .filter((c) => c?.web?.uri);
+
+        const results = await Promise.all(
+          candidates.map((c) => resolveAndVerifyUrl(c!.web!.uri!))
+        );
+        const url = results.find((u) => u !== null);
+        if (url) return { ...item, sourceUrl: url };
         return null;
       })
     );

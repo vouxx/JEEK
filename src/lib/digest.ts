@@ -27,24 +27,13 @@ export async function generateDigest() {
     return existing;
   }
 
-  // Fetch news in parallel batches (Gemini 2.5 Flash free tier: 10 RPM)
-  const batchSize = 4;
-  const results: { category: Category; items: Awaited<ReturnType<typeof fetchNewsForCategory>> }[] = [];
-
-  for (let i = 0; i < CATEGORY_KEYS.length; i += batchSize) {
-    const batch = CATEGORY_KEYS.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(async (category) => ({
-        category,
-        items: await fetchNewsForCategory(category),
-      }))
-    );
-    results.push(...batchResults);
-    // Wait between batches to respect rate limit
-    if (i + batchSize < CATEGORY_KEYS.length) {
-      await new Promise((r) => setTimeout(r, 5000));
-    }
-  }
+  // Fetch news for all categories in parallel (8 categories < Gemini free tier 10 RPM)
+  const results = await Promise.all(
+    CATEGORY_KEYS.map(async (category) => ({
+      category,
+      items: await fetchNewsForCategory(category),
+    }))
+  );
 
   // Store in database
   const digest = await prisma.digest.create({
