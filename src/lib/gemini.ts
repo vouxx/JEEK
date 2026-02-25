@@ -165,6 +165,8 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
     const groundingSupports =
       response.candidates?.[0]?.groundingMetadata?.groundingSupports ?? [];
 
+    console.log(`[grounding] chunks: ${groundingChunks.length}, supports: ${groundingSupports.length}, parsed: ${parsed.length}`);
+
     // support → 아이템 매핑 (2가지 전략 병행)
     const itemChunkMap = new Map<number, Set<number>>();
 
