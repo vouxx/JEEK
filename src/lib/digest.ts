@@ -27,20 +27,16 @@ export async function generateDigest() {
     return existing;
   }
 
-  // Fetch news sequentially (Gemini 2.5 Flash free tier: 5 RPM)
+  // Fetch news sequentially with delay (Gemini 2.5 Flash free tier: 5 RPM)
   const results: { category: Category; items: Awaited<ReturnType<typeof fetchNewsForCategory>> }[] = [];
 
   for (let i = 0; i < CATEGORY_KEYS.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 15000));
     const category = CATEGORY_KEYS[i];
     results.push({
       category,
       items: await fetchNewsForCategory(category),
     });
-    // 5 RPM 제한 → 매 4번째 요청 후 60초 대기
-    if ((i + 1) % 4 === 0 && i + 1 < CATEGORY_KEYS.length) {
-      console.log(`Rate limit pause after ${i + 1} categories...`);
-      await new Promise((r) => setTimeout(r, 60000));
-    }
   }
 
   // Store in database
