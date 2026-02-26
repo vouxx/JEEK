@@ -66,8 +66,8 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 - **FR-2**: MUST - 1회 API 호출로 전체 카테고리 30~40개 아이템 요청 (카테고리당 3~5개)
 - **FR-3**: MUST - 한국어로 작성, 영어/한국어 소스 모두 검색
 - **FR-4**: MUST - 각 아이템에 title, summary, whyItMatters, sourceHint 포함
-- **FR-5**: MUST - grounding redirect URL → 302 Location 추출로 실제 URL 확보, 실패 시 Google 검색 링크 fallback
-- **FR-29**: MUST - 소스 범위: 뉴스 매체, 개발자 커뮤니티(HN, Reddit), 블로그, GitHub 등
+- **FR-5**: MUST - grounding redirect URL → query param 직접 파싱 또는 302 chain follow(최대 5 hop)로 실제 URL 확보, 실패 시 DuckDuckGo !ducky fallback (첫 검색 결과로 자동 리다이렉트)
+- **FR-29**: MUST - 소스 범위: 뉴스 매체, 개발자 커뮤니티(HN, GeekNews, Reddit), 소셜(X/Twitter), 블로그, GitHub 등
 
 ### 카테고리
 
@@ -135,7 +135,7 @@ Google Gemini AI가 매일 주요 기술 뉴스를 수집/요약하고, 웹과 �
 ## Success Criteria
 
 - **SC-1**: 매일 8개 카테고리에서 30~40개 뉴스 아이템 수집
-- **SC-2**: 출처 URL 검증 성공률 80% 이상 (Google 검색 fallback 20% 이하)
+- **SC-2**: 출처 URL 검증 성공률 80% 이상 (DuckDuckGo !ducky fallback 20% 이하)
 - **SC-3**: 구독자 이메일 발송 성공률 95% 이상
 - **SC-4**: 다이제스트 생성 소요 시간 3분 이내
 

@@ -8,7 +8,7 @@ interface DigestCardProps {
 }
 
 export function DigestCard({ title, summary, whyItMatters, sourceUrl }: DigestCardProps) {
-  const isGoogleFallback = sourceUrl.includes("news.google.com/search");
+  const isGoogleFallback = sourceUrl.includes("duckduckgo.com/?q=!");
 
   return (
     <article className="group py-4">

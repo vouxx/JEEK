@@ -25,8 +25,8 @@
 
 1. `groundingSupports`의 `startIndex` 기반 위치 매핑 — 아이템의 title이 응답 텍스트에서 나타나는 위치와 support의 startIndex 비교
 2. 텍스트 유사도 기반 fallback — 아이템 제목/요약의 단어가 support 텍스트에 20% 이상 일치하면 매핑
-3. URL 리졸브: grounding redirect URL → GET (redirect: manual) → 302 Location 헤더에서 실제 URL 추출
-4. 실패 시 Google 검색 링크 fallback (`https://www.google.com/search?q=...`)
+3. URL 리졸브: (a) `google.com/url?q=` 형태면 query param 직접 파싱, (b) 그 외 302 redirect chain을 최대 5 hop follow (google/vertexaisearch 도메인은 계속 추적)
+4. 실패 시 DuckDuckGo !ducky fallback (`https://duckduckgo.com/?q=!ducky+...`) — 첫 검색 결과로 자동 리다이렉트
 
 ## Technical Decisions
 
@@ -43,7 +43,8 @@
 | URL 검증 병렬화 | 전체 아이템 URL 리졸브를 `Promise.all`로 병렬 처리 → 실행 시간 대폭 단축 |
 | maxDuration = 300 | Vercel Hobby 플랜에서 300초까지 설정 가능. Gemini API 응답이 2분+ 소요될 수 있으므로 300초 필요 |
 | SDK → REST API 직접 호출 | `@google/genai` SDK v1.42.0이 `groundingMetadata` (groundingChunks, groundingSupports)를 응답에 포함하지 않는 버그 → REST API `fetch()` 직접 호출로 전환 |
-| Google 검색 fallback | URL 리졸브 실패 시 아이템 제외 대신 Google 검색 링크 fallback 제공 → 콘텐츠 손실 방지 |
+| DuckDuckGo !ducky fallback | URL 리졸브 실패 시 Google 검색 페이지 대신 DuckDuckGo !ducky 사용 → 첫 검색 결과로 바로 리다이렉트, 사용자가 검색 페이지를 볼 일 없음 |
+| 소스 범위 확장 | X/Twitter 트렌딩 + GeekNews(긱뉴스) 추가 → 개발자 커뮤니티 및 소셜 커버리지 확대 |
 | 빈 다이제스트 재생성 | 이전에 빈 다이제스트(아이템 0개)가 생성되면 "이미 존재"로 스킵되는 문제 → 빈 다이제스트 감지 시 삭제 후 재생성 |
 | Prisma 클라이언트 재생성 | 스키마 변경 후 `prisma db push`만으로는 클라이언트 타입이 갱신 안 됨. 반드시 `prisma generate` 실행 필요 |
 

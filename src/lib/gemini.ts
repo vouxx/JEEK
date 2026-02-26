@@ -11,7 +11,8 @@ const SYSTEM_PROMPT = `너는 ZEEK이라는 데일리 뉴스레터의 테크 뉴
 
 소스 범위:
 - 뉴스 매체: TechCrunch, The Verge, Ars Technica, 한겨레, ZDNet 등
-- 개발자 커뮤니티: Hacker News, Reddit (r/programming, r/webdev 등), Lobste.rs
+- 개발자 커뮤니티: Hacker News, GeekNews(긱뉴스), Reddit (r/programming, r/webdev 등), Lobste.rs
+- 소셜: X(Twitter)에서 화제가 되는 기술 관련 트윗, 스레드, 발표
 - 블로그/포럼: dev.to, Medium 기술 블로그, 개인 개발자 블로그
 - 오픈소스: GitHub Trending, 주요 프로젝트 릴리스 노트
 - 커뮤니티에서 화제가 되는 글, 토론, 프로젝트도 포함해줘
@@ -26,7 +27,7 @@ ${buildCategoryList()}
 - "title": 간결한 헤드라인 (40자 이내)
 - "summary": 한 문장으로 요약
 - "whyItMatters": 개발자/테크 종사자가 왜 관심을 가져야 하는지 한 문장
-- "sourceHint": 출처명 (예: TechCrunch, Hacker News, r/programming, GitHub 등)
+- "sourceHint": 출처명 (예: TechCrunch, Hacker News, GeekNews, r/programming, GitHub, X/Twitter 등)
 
 예시:
 [
@@ -65,21 +66,52 @@ function extractWords(text: string): string[] {
 
 /**
  * grounding redirect URL에서 실제 기사 URL을 추출.
- * Google의 302 리다이렉트 Location 헤더에서 바로 가져옴.
+ * 1) google.com/url?q= 형태면 query param에서 직접 추출
+ * 2) 그 외에는 302 redirect chain을 최대 5회까지 follow
  */
 async function resolveGroundingUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(10000),
-    });
-    const location = res.headers.get("location");
-    if (!location) return null;
-    const path = new URL(location).pathname;
-    if (path.length <= 1) return null;
-    return location;
-  } catch {
+    // 전략 1: google.com/url?q= 형태면 HTTP 요청 없이 바로 추출
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith("google.com") && parsed.pathname === "/url") {
+      const q = parsed.searchParams.get("q");
+      if (q) {
+        const qPath = new URL(q).pathname;
+        if (qPath.length > 1) return q;
+      }
+    }
+
+    // 전략 2: redirect chain follow (최대 5 hop)
+    let current = url;
+    for (let hop = 0; hop < 5; hop++) {
+      const res = await fetch(current, {
+        method: "GET",
+        redirect: "manual",
+        signal: AbortSignal.timeout(10000),
+      });
+      const location = res.headers.get("location");
+      if (!location) {
+        console.log(`[url-resolve] No location: status=${res.status} url=${current.slice(0, 80)}`);
+        return null;
+      }
+      const resolved = new URL(location, current).href;
+      const path = new URL(resolved).pathname;
+      if (path.length <= 1) {
+        console.log(`[url-resolve] Homepage redirect: ${resolved.slice(0, 80)}`);
+        return null;
+      }
+      // google redirect chain이면 계속 follow
+      const host = new URL(resolved).hostname;
+      if (host.endsWith("google.com") || host.includes("vertexaisearch")) {
+        current = resolved;
+        continue;
+      }
+      return resolved;
+    }
+    console.log(`[url-resolve] Max hops reached: ${url.slice(0, 80)}`);
+    return null;
+  } catch (e) {
+    console.log(`[url-resolve] Error: ${(e as Error).message?.slice(0, 100)} url=${url.slice(0, 80)}`);
     return null;
   }
 }
@@ -242,9 +274,9 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
           if (url) return { ...item, sourceUrl: url };
         }
 
-        // fallback: Google 검색 링크
+        // fallback: DuckDuckGo !ducky — 첫 번째 검색 결과로 바로 리다이렉트
         const query = encodeURIComponent(`${item.title} ${item.sourceHint}`);
-        return { ...item, sourceUrl: `https://www.google.com/search?q=${query}` };
+        return { ...item, sourceUrl: `https://duckduckgo.com/?q=!ducky+${query}` };
       })
     );
 
@@ -267,7 +299,7 @@ export async function fetchAllNews(): Promise<Map<Category, NewsItem[]>> {
       });
     }
 
-    const verified = resolvedItems.filter((i) => !i.sourceUrl.startsWith("https://www.google.com/search")).length;
+    const verified = resolvedItems.filter((i) => !i.sourceUrl.includes("duckduckgo.com/?q=!")).length;
     console.log(`[all] ${verified}/${parsed.length} verified, ${resolvedItems.length} total`);
     return result;
   } catch (e) {

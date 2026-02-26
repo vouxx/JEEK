@@ -204,6 +204,30 @@
 
 ---
 
+## Session 2026-02-26
+
+### 링크 fallback 개선 + 소스 확장 ✅
+
+**작업 내역**:
+
+1. `resolveGroundingUrl()` 강화
+   - `google.com/url?q=` 형태 URL query param 직접 파싱 (HTTP 요청 없이)
+   - 302 redirect chain 최대 5 hop follow (google/vertexaisearch 도메인은 계속 추적)
+   - resolve 실패 시 상세 로깅 복원 (status code, 홈페이지 리다이렉트, max hops, 에러)
+2. Fallback URL: Google 검색 → DuckDuckGo !ducky (첫 검색 결과로 자동 리다이렉트)
+3. DigestCard fallback 감지 버그 수정 (`news.google.com/search` → `duckduckgo.com/?q=!`)
+4. 소스 범위 확장: X(Twitter) 트렌딩 + GeekNews(긱뉴스) 추가
+
+**수정 파일**:
+
+- `src/lib/gemini.ts` — resolveGroundingUrl 강화, fallback URL 변경, 소스 프롬프트 확장
+- `src/components/DigestCard.tsx` — isGoogleFallback 감지 로직 수정
+- `specs/SPEC.md` — FR-5, FR-29, SC-2 업데이트
+- `specs/findings.md` — URL 리졸브 전략 + 기술 결정 업데이트
+- `specs/progress.md` — 이 세션 기록
+
+---
+
 ## 5-Question Reboot Check
 
 | Question | Answer |
